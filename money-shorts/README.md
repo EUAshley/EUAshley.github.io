@@ -49,6 +49,25 @@ to pick a subset.
   `release.md` summary. Unique cuts and every platform's `publish.md` are
   copied to `renders/`.
 
+## Language-learning episodes
+
+The same engine makes language lessons. See `episodes/spanish-ser-estar.yaml`.
+
+- **Two voices:** in `say:`, text wrapped in `<es>…</es>` is spoken by a
+  native Spanish voice (`voice.alt.es`, Kokoro `ef_dora`). The rest uses the
+  English narrator. Spanish words show in the captions in their own color.
+- **Pauses:** `[pause 2]` inserts thinking time, for example before a quiz
+  answer.
+- **Glossary gate:** every spoken foreign phrase must appear in the episode's
+  sourced `glossary:` (rule **E6**). An unvetted example like
+  `<es>Es muerto</es>` blocks the build.
+- **New scene types:** `phrase` (a phrase card with its translation and a
+  note), `list` (vocab rows that light up as each one is spoken) and `quiz`
+  (a countdown ring, then the answer is revealed on cue). Scenes can sync to
+  narration with sentence indexes (`meaning_at: 2`, `reveal: 3`, `at: 2`).
+- **Other languages:** add a voice under `voice.alt` (Kokoro also has French,
+  Italian, Portuguese, Hindi and Japanese voices).
+
 To make a new video, open a Claude Code session in this repo and say something like
 *"Make a Money Shorts episode: why printer companies sell printers cheap."*
 Claude follows [`CLAUDE.md`](CLAUDE.md) end to end: research, fact ledger,
@@ -97,11 +116,16 @@ It warns on single-source claims, unhedged "reported" claims, and source conflic
 | How Costco actually makes its money | [`costco-membership.youtube.mp4`](renders/costco-membership.youtube.mp4) | YouTube Shorts, Instagram Reels, LinkedIn | 58.6 s |
 | | [`costco-membership.tiktok.mp4`](renders/costco-membership.tiktok.mp4) | TikTok (+1 scene, over 1 minute) | 64.8 s |
 
-Each platform's title, caption, hashtags and upload checklist are in `renders/costco-membership.<platform>.publish.md`.
+| Ser vs. Estar (Spanish lesson) | [`spanish-ser-estar.youtube.mp4`](renders/spanish-ser-estar.youtube.mp4) | YouTube Shorts, Instagram Reels, LinkedIn | 54.0 s |
+| | [`spanish-ser-estar.tiktok.mp4`](renders/spanish-ser-estar.tiktok.mp4) | TikTok (+2 vocab pairs, over 1 minute) | 63.6 s |
+
+Each platform's title, caption, hashtags and upload checklist are in `renders/<id>.<platform>.publish.md`.
 
 ## Known limits
 
 - The voice is synthetic. Disclose AI narration where a platform requires it.
+- For language videos, Kokoro's Spanish voice is clear but not perfect. Have a
+  native speaker spot-check pronunciation before you publish a series.
 - Caption word timing is estimated from syllables within each sentence.
   Sentence boundaries are exact, and single words can drift by up to about
   0.2 s.

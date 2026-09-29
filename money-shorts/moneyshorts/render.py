@@ -32,6 +32,7 @@ class TimedScene:
     source_note: str
     start: float
     dur: float
+    marks: list[float]  # sentence start times, relative to the scene
 
 
 @dataclass
@@ -48,7 +49,7 @@ def build_timeline(ep: Episode) -> Timeline:
     parts, scenes, words = [], [], []
     t = 0.0
     for i, sc in enumerate(ep.scenes):
-        na = narrate(sc.say, voice, speed)
+        na = narrate(sc.say, voice, speed, ep.voice.get("alt"))
         hold = sc.hold + (LEAD_OUT if i == len(ep.scenes) - 1 else 0)
         dur = na.duration + hold
         min_dur = float(sc.visual.get("min_duration", 0))
@@ -56,9 +57,11 @@ def build_timeline(ep: Episode) -> Timeline:
             hold += min_dur - dur
             dur = min_dur
         for s in na.sentences:
-            words += time_words(s.text, t + s.start, t + s.end)
+            for r in s.runs:
+                words += time_words(r.text, t + r.start, t + r.end, r.lang)
         parts += [na.audio, np.zeros(int(hold * SR), np.float32)]
-        scenes.append(TimedScene(sc.type, resolve_visual(sc.visual, ep), sc.source_note, t, dur))
+        scenes.append(TimedScene(sc.type, resolve_visual(sc.visual, ep), sc.source_note, t, dur,
+                                 [s.start for s in na.sentences]))
         t += dur
     audio = np.concatenate(parts)
     total = len(audio) / SR
@@ -73,6 +76,8 @@ _G: dict = {}
 def _init(ep_values, theme_hex, kicker, timeline_meta, chunks):
     _G.update(values=ep_values, theme=Theme(theme_hex), kicker=kicker, scenes=timeline_meta,
               chunks=[Chunk([Word(*w) for w in c]) for c in chunks])
+    for s in timeline_meta:  # scenes can sync to narration via v["_marks"]
+        s["visual"] = {**s["visual"], "_marks": s.get("marks", [])}
 
 
 def _scene_at(t: float):
@@ -146,9 +151,9 @@ def build(ep: Episode, out_dir: Path, workers: int | None = None, preview: bool 
     (out_dir / "captions.srt").write_text(srt(tl.chunks))
 
     theme_hex = dict(Theme(ep.style.get("theme")).hex)
-    meta = [dict(type=s.type, visual=s.visual, source_note=s.source_note, start=s.start, dur=s.dur)
+    meta = [dict(type=s.type, visual=s.visual, source_note=s.source_note, start=s.start, dur=s.dur, marks=s.marks)
             for s in tl.scenes]
-    chunks = [[(w.text, w.start, w.end) for w in c.words] for c in tl.chunks]
+    chunks = [[(w.text, w.start, w.end, w.lang) for w in c.words] for c in tl.chunks]
     values = {k: f.value for k, f in ep.facts.items()}
     initargs = (values, theme_hex, ep.style.get("kicker", ""), meta, chunks)
 

@@ -16,6 +16,7 @@ class Word:
     text: str
     start: float
     end: float
+    lang: str = "en"
 
 
 @dataclass
@@ -56,14 +57,14 @@ def word_weight(display_word: str) -> float:
     return weight
 
 
-def time_words(sentence: str, start: float, end: float) -> list[Word]:
+def time_words(sentence: str, start: float, end: float, lang: str = "en") -> list[Word]:
     words = sentence.split()
     weights = [word_weight(w) for w in words]
     total = sum(weights) or 1
     out, t = [], start
     for w, wt in zip(words, weights):
         dur = (end - start) * wt / total
-        out.append(Word(w, t, t + dur))
+        out.append(Word(w, t, t + dur, lang))
         t += dur
     return out
 
@@ -71,7 +72,8 @@ def time_words(sentence: str, start: float, end: float) -> list[Word]:
 def chunk_words(words: list[Word]) -> list[Chunk]:
     chunks, cur = [], []
     for w in words:
-        if cur and (len(cur) >= MAX_WORDS or len(" ".join(x.text for x in cur + [w])) > MAX_CHARS):
+        lang_change = cur and cur[-1].lang != w.lang
+        if cur and (lang_change or len(cur) >= MAX_WORDS or len(" ".join(x.text for x in cur + [w])) > MAX_CHARS):
             chunks.append(Chunk(cur))
             cur = []
         cur.append(w)
@@ -96,7 +98,7 @@ def draw_caption(d, chunks: list[Chunk], t: float, theme):
     if active is None:
         return
     f = font(76, "Black")
-    words = [clean(w.text).upper() for w in active.words]
+    words = [clean(w.text).upper() if w.lang == "en" else clean(w.text) for w in active.words]
     space = text_w(" ", f)
     widths = [text_w(w, f) for w in words]
     total = sum(widths) + space * (len(words) - 1)
@@ -113,10 +115,13 @@ def draw_caption(d, chunks: list[Chunk], t: float, theme):
           fill=(0, 0, 0), alpha=0.55 * min(1, pop))
     for w, ww, word in zip(active.words, widths, words):
         speaking = w.start <= t < w.end or (w is active.words[-1] and t >= w.start)
-        col = theme.accent2 if speaking else theme.text
+        foreign = w.lang != "en"
+        col = theme.accent if foreign else (theme.accent2 if speaking else theme.text)
         dy = -6 if speaking else 0
         draw_text(d, (x, y + dy + (1 - pop) * 18), word, f, col, anchor="lm", alpha=min(1, pop * 1.5),
                   stroke=5, stroke_fill=(0, 0, 0))
+        if foreign and speaking:
+            rrect(d, (x, y + f.size * 0.5, x + ww, y + f.size * 0.5 + 7), 3, fill=theme.accent)
         x += ww + space
 
 

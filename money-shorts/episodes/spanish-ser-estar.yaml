@@ -1,0 +1,201 @@
+id: spanish-ser-estar
+title: "Ser vs. Estar: why 'I'm bored' can become 'I'm boring'"
+hook_question: Spanish has two verbs for "to be". Pick the wrong one and "I'm bored" becomes "I'm boring".
+status: rendered
+
+voice:
+  name: af_heart          # English narrator (the teacher)
+  speed: 1.12
+  alt:
+    es: {name: ef_dora, speed: 0.92}   # native Spanish voice for every <es>…</es> example, a bit slower for learners
+
+style:
+  kicker: Spanish in 60 seconds
+  music: true
+  theme:
+    accent: "#FF7A59"     # coral: Spanish words
+    accent2: "#FFD166"    # yellow: highlights
+    bg_top: "#0D0B14"
+    bg_bottom: "#1A1426"
+    grid: "#221B30"
+    panel: "#231C33"
+
+# ------------------------------------------------------------------ SOURCES
+sources:
+  spanishdict_guide:
+    title: Ser vs. Estar
+    publisher: SpanishDict
+    url: https://www.spanishdict.com/guide/ser-vs-estar
+    accessed: 2026-09-29
+  spanishdict_events:
+    title: Ser and location of events
+    publisher: SpanishDict
+    url: https://www.spanishdict.com/answers/7085/ser-and-location-of-events
+    accessed: 2026-09-29
+  kwiziq_meaning:
+    title: Some adjectives change meaning when used with ser or estar
+    publisher: Kwiziq Spanish
+    url: https://spanish.kwiziq.com/revision/grammar/some-adjectives-change-meaning-when-used-with-ser-or-estar
+    accessed: 2026-09-29
+  kwiziq_events:
+    title: Use ser (not estar) to say when or where something takes place
+    publisher: Kwiziq Spanish
+    url: https://spanish.kwiziq.com/revision/grammar/use-ser-not-estar-to-say-when-where-something-takes-place
+    accessed: 2026-09-29
+  coffeebreak:
+    title: 6 Spanish words that change meaning with 'ser' and 'estar'
+    publisher: Coffee Break Languages
+    url: https://coffeebreaklanguages.com/2023/12/6-spanish-words-that-change-meaning-with-ser-and-estar/
+    accessed: 2026-09-29
+  rae_muerto:
+    title: muerto, muerta — Diccionario de la lengua española
+    publisher: Real Academia Española
+    url: https://dle.rae.es/muerto
+    accessed: 2026-09-29
+    primary: true
+  cvc_muerto:
+    title: Estar muerto (CVC forum answer)
+    publisher: Instituto Cervantes, Centro Virtual Cervantes
+    url: https://cvc.cervantes.es/foros/leer_asunto1.asp?vCodigo=12805
+    accessed: 2026-09-29
+    note: Explains estar muerto as a resulting state; "es un muerto" is a different, noun use.
+
+# Every Spanish phrase spoken in <es>…</es> must be listed here (fact-check rule E6).
+glossary:
+  - {phrase: estoy aburrido, meaning: "I'm bored", sources: [kwiziq_meaning, coffeebreak]}
+  - {phrase: soy aburrido, meaning: "I'm boring", sources: [kwiziq_meaning, coffeebreak]}
+  - {phrase: ser, meaning: "to be (identity, traits, origin)", sources: [spanishdict_guide]}
+  - {phrase: estar, meaning: "to be (states, conditions, location)", sources: [spanishdict_guide]}
+  - {phrase: es listo, meaning: "he's smart", sources: [kwiziq_meaning, coffeebreak]}
+  - {phrase: está listo, meaning: "he's ready", sources: [kwiziq_meaning, coffeebreak]}
+  - {phrase: es rico, meaning: "he's rich", sources: [kwiziq_meaning, coffeebreak]}
+  - {phrase: está rico, meaning: "it's delicious (food)", sources: [kwiziq_meaning, coffeebreak]}
+  - {phrase: es malo, meaning: "he's a bad person", sources: [kwiziq_meaning, coffeebreak]}
+  - {phrase: está malo, meaning: "he's sick (also: food that tastes bad or has gone off)", sources: [kwiziq_meaning, coffeebreak],
+     note: common in Spain; 'está enfermo' is the neutral way to say sick}
+  - {phrase: es vivo, meaning: "he's lively / sharp", sources: [kwiziq_meaning]}
+  - {phrase: está vivo, meaning: "he's alive", sources: [kwiziq_meaning]}
+  - {phrase: está muerto, meaning: "he's dead", sources: [rae_muerto, cvc_muerto],
+     note: estar is used even though death is permanent}
+  - {phrase: la fiesta es en mi casa, meaning: "the party is at my house", sources: [spanishdict_events, kwiziq_events],
+     note: events 'take place', so ser}
+  - {phrase: el café está frío, meaning: "the coffee is cold", sources: [spanishdict_guide],
+     note: a changed condition, so estar}
+
+facts: {}
+
+# ------------------------------------------------------------------ STORY / SCENES
+# Arc: hook (the embarrassing mistake) -> the two verbs -> the core idea
+#      -> pairs that flip meaning -> two surprising exceptions -> quiz -> one-line rule
+scenes:
+  - id: hook
+    type: compare
+    say: <es>Estoy aburrido</es> means I'm bored. But <es>soy aburrido</es>? That means I'm boring.
+    visual:
+      top: {title: estar, value: Estoy aburrido, sub: "= I'm bored", color: accent2}
+      bottom: {title: ser, value: Soy aburrido, sub: "= I'm boring", color: accent}
+
+  - id: two-verbs
+    type: statement
+    say: Spanish has two verbs for to be. <es>Ser</es>, and <es>estar</es>.
+    visual:
+      text: Two verbs for *"to* *be":* *ser* and *estar*
+      sub: And swapping them changes the meaning.
+
+  - id: core-idea
+    type: list
+    say: <es>Ser</es> is what something is. Its identity, personality, and origin. <es>Estar</es> is how or where it is right now. Moods, conditions, and location.
+    source_note: SpanishDict, "Ser vs. Estar"
+    visual:
+      title: The core idea
+      sync_from: 0
+      items:
+        - {text: "*SER* = what it is", meaning: "identity · personality · origin", at: 0}
+        - {text: "*ESTAR* = how / where it is", meaning: "mood · condition · location", at: 2}
+
+  - id: flips
+    type: list
+    say: So one adjective can mean two things. <es>Es listo</es>, he's smart. <es>Está listo</es>, he's ready. <es>Es rico</es>, he's rich. <es>Está rico</es>, it's delicious.
+    source_note: Kwiziq Spanish; Coffee Break Languages
+    visual:
+      title: Same word, new meaning
+      sync_from: 1
+      items:
+        - {text: "*Es* listo", meaning: "he's smart"}
+        - {text: "*Está* listo", meaning: "he's ready"}
+        - {text: "*Es* rico", meaning: "he's rich"}
+        - {text: "*Está* rico", meaning: "it's delicious"}
+
+  - id: exception-dead
+    type: phrase
+    say: Now the catch. Being dead is pretty permanent, but Spanish still uses <es>estar</es>. <es>Está muerto</es>.
+    source_note: RAE, Diccionario de la lengua española; Instituto Cervantes (CVC)
+    hold: 1.4   # time to read the explanation after the Spanish is spoken
+    visual:
+      label: estar, even though it's permanent
+      text: Está *muerto.*
+      meaning: He's dead.
+      meaning_at: 2
+      gloss: Estar describes the state he ended up in, not who he is.
+
+  - id: exception-party
+    type: phrase
+    say: And where a party is happening? That's <es>ser</es>, not <es>estar</es>. <es>La fiesta es en mi casa</es>.
+    source_note: SpanishDict; Kwiziq Spanish
+    hold: 1.0
+    visual:
+      label: ser for events
+      text: La fiesta *es* en mi casa.
+      meaning: The party is at my house.
+      meaning_at: 2
+      gloss: "Events take place: ser. People and things are located: estar."
+
+  - id: quiz
+    type: quiz
+    say: Quick test. Your coffee went cold. Which verb? [pause 2.2] <es>El café está frío</es>. It changed, so it's <es>estar</es>.
+    visual:
+      prompt: Your coffee went cold…
+      question: El café ___ frío.
+      options: [es, está]
+      answer: 1
+      reveal: 3
+      countdown: 2.0
+      meaning: It changed, so it's a condition → estar
+
+  - id: rule
+    type: end
+    say: <es>Ser</es> is who you are. <es>Estar</es> is how you are.
+    visual:
+      text: "*Ser* is who you are. *Estar* is how you are."
+      sub: Save this for your next Spanish conversation.
+      cta: Follow for daily Spanish
+
+# TikTok's Creator Rewards needs 61s+, so its cut gets two more meaning-flip pairs.
+variants:
+  tiktok:
+    add_scenes:
+      - after: flips
+        id: flips-bonus
+        type: list
+        say: Two more pairs that flip the same way. <es>Es malo</es>, he's a bad person. <es>Está malo</es>, he's sick. <es>Es vivo</es>, he's lively. <es>Está vivo</es>, he's alive.
+        source_note: Kwiziq Spanish; Coffee Break Languages
+        visual:
+          title: Two more pairs
+          sync_from: 1
+          items:
+            - {text: "*Es* malo", meaning: "he's a bad person"}
+            - {text: "*Está* malo", meaning: "he's sick"}
+            - {text: "*Es* vivo", meaning: "he's lively"}
+            - {text: "*Está* vivo", meaning: "he's alive"}
+    publish:
+      description: >
+        Estoy aburrido = I'm bored. Soy aburrido = I'm boring. Spanish has two verbs for "to be",
+        and swapping them changes the meaning. Can you get the quiz right? 👇
+
+publish:
+  title: "Ser vs Estar: don't call yourself boring 😅🇪🇸"
+  description: >
+    Spanish has two verbs for "to be", and mixing them up changes the meaning:
+    estoy aburrido = I'm bored, soy aburrido = I'm boring. Plus two exceptions
+    that surprise even intermediate learners.
+  hashtags: [learnspanish, spanish, spanishlessons, serestar, languagelearning, espanol]

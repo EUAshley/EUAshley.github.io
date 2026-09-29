@@ -495,7 +495,192 @@ def end(img, d, t, dur, v, ctx):
     draw_text(d, (CX, yb - 50), cta, f, ctx.theme.accent, anchor="mm", alpha=clamp(a))
 
 
+# ------------------------------------------------------------ language scenes
+
+def mark(v, key, default: float) -> float:
+    """Resolve a timing field: an int = start of that narration sentence (0-based), a float = seconds."""
+    val = v.get(key)
+    marks = v.get("_marks") or []
+    if isinstance(val, bool) or val is None:
+        return default
+    if isinstance(val, int):
+        return marks[val] if -len(marks) <= val < len(marks) else default
+    return float(val)
+
+
+def chip(d, ctx, text, cx, y, alpha, color=None, size=40):
+    f = font(size, "ExtraBold")
+    w = text_w(text, f) + 56
+    col = color or ctx.theme.accent
+    rrect(d, (cx - w / 2, y, cx + w / 2, y + size * 1.9), size, fill=col, alpha=alpha)
+    draw_text(d, (cx, y + size * 0.95), text, f, ctx.theme.bg_top, anchor="mm", alpha=alpha)
+
+
+def phrase(img, d, t, dur, v, ctx):
+    """Foreign phrase card. label, text (*key word*), meaning, gloss; meaning_at = sentence index/seconds"""
+    label = ctx.txt(v.get("label", ""))
+    tokens = split_emphasis(ctx.txt(v.get("text", "")))
+    meaning = ctx.txt(v.get("meaning", ""))
+    gloss = ctx.txt(v.get("gloss", ""))
+    f, lines = fit_tokens(tokens, SW, 380, int(v.get("size", 128)), "Black")
+    block = len(lines) * f.size * 1.14
+    fm, ml, msize = fit_wrapped(meaning, SW, 150, 62, "SemiBold") if meaning else (None, [], 0)
+    fg, gl, gsize = fit_wrapped(gloss, SW - 80, 150, 40, "Medium") if gloss else (None, [], 0)
+    total = (110 if label else 0) + block + (60 + len(ml) * msize * 1.15 if meaning else 0) \
+        + (70 + len(gl) * gsize * 1.2 + 50 if gloss else 0)
+    y = Y0 + max(0, (SH - total) / 2)
+    if label:
+        chip(d, ctx, label.upper(), CX, y, ease_out(prog(t, 0, 0.3)))
+        y += 110
+    reveal = prog(t, 0.1, max(0.5, min(1.0, dur * 0.3)))
+    draw_emph_lines(d, lines, f, y, ctx, reveal=reveal if reveal < 1 else 1.0,
+                    base_color=ctx.theme.text, emph_color=ctx.theme.accent)
+    y += block + 30
+    t_m = mark(v, "meaning_at", 0.9)
+    a = ease_out(prog(t, t_m, 0.35))
+    if meaning:
+        rrect(d, (CX - 50 * a, y, CX + 50 * a, y + 6), 3, fill=ctx.theme.muted, alpha=a)
+        y += 30
+        for i, l in enumerate(ml):
+            draw_text(d, (CX, y + msize * 0.6 + i * msize * 1.15 + (1 - a) * 20), l, fm, ctx.theme.text,
+                      anchor="mm", alpha=a)
+        y += len(ml) * msize * 1.15
+    if gloss:
+        ag = ease_out(prog(t, t_m + 0.4, 0.35))
+        y += 40
+        h = len(gl) * gsize * 1.2 + 40
+        rrect(d, (X0 + 10, y, X1 - 10, y + h), 24, fill=ctx.theme.panel, alpha=ag)
+        for i, l in enumerate(gl):
+            draw_text(d, (CX, y + 20 + gsize * 0.6 + i * gsize * 1.2), l, fg, ctx.theme.muted, anchor="mm", alpha=ag)
+
+
+def list_(img, d, t, dur, v, ctx):
+    """Vocab / rule list. title, items [{text, meaning}]; items appear at narration sentences from sync_from"""
+    items = v.get("items", [])
+    title = ctx.txt(v.get("title", ""))
+    n = max(1, len(items))
+    gap = 22
+    title_h = 0
+    if title:
+        f, lines, size = fit_wrapped(title, SW, 130, 60, "ExtraBold")
+        title_h = 40 + len(lines) * size * 1.1
+    row = min(230, (SH - title_h - gap * (n - 1)) / n)
+    block = title_h + row * n + gap * (n - 1)
+    top = Y0 + max(0, (SH - block) / 2 - 40)  # centre title + rows
+    if title:
+        for i, l in enumerate(lines):
+            draw_text(d, (CX, top + 30 + i * size * 1.1), l, f, ctx.theme.text, anchor="mm", alpha=prog(t, 0, 0.3))
+        top += title_h
+    sync = v.get("sync_from", 0)
+    marks = v.get("_marks") or []
+    starts = []
+    for i in range(n):
+        at = items[i].get("at") if i < len(items) else None
+        k = at if isinstance(at, int) else (sync + i if isinstance(sync, int) else None)
+        starts.append(marks[k] if k is not None and k < len(marks) else 0.3 + 0.5 * i)
+    current = max([i for i, st in enumerate(starts) if t >= st] or [-1])
+    for i, it in enumerate(items):
+        a = ease_out(prog(t, starts[i], 0.35))
+        if a <= 0:
+            continue
+        y0 = top + i * (row + gap) + (1 - a) * 30
+        active = i == current
+        rrect(d, (X0, y0, X1, y0 + row), 28, fill=ctx.theme.panel, alpha=a)
+        if active:
+            rrect(d, (X0, y0, X1, y0 + row), 28, outline=ctx.theme.accent, width=5, alpha=a)
+        tokens = split_emphasis(ctx.txt(it.get("text", "")))
+        ft, tl = fit_tokens(tokens, SW - 80, row * 0.5, int(row * 0.36), "Black", min_size=30)
+        draw_emph_lines(d, tl[:1], ft, y0 + row * 0.16, ctx, base_color=ctx.theme.accent,
+                        emph_color=ctx.theme.accent2)
+        mean = ctx.txt(it.get("meaning", ""))
+        if mean:
+            fm = fit_font(mean, SW - 80, int(row * 0.2), "SemiBold")
+            draw_text(d, (CX, y0 + row * 0.74), mean, fm, ctx.theme.text if active else ctx.theme.muted,
+                      anchor="mm", alpha=a)
+
+
+def _check(d, cx, cy, s, color):
+    d.line([(cx - s * 0.5, cy), (cx - s * 0.15, cy + s * 0.35), (cx + s * 0.55, cy - s * 0.4)],
+           fill=(*color, 255), width=max(4, int(s * 0.18)), joint="curve")
+
+
+def quiz(img, d, t, dur, v, ctx):
+    """Quiz. prompt, question (use ___ for the blank), options [..], answer (index), meaning,
+    reveal (sentence index/seconds, default: last sentence), countdown (seconds before reveal)"""
+    prompt = ctx.txt(v.get("prompt", ""))
+    question = ctx.txt(v.get("question", ""))
+    options = [ctx.txt(o) for o in v.get("options", [])]
+    ans = int(v.get("answer", 0))
+    t_rev = mark(v, "reveal", -1.0)
+    if t_rev < 0:
+        marks = v.get("_marks") or []
+        t_rev = marks[-1] if marks else dur * 0.6
+    cd = float(v.get("countdown", 2.0))
+    revealed = t >= t_rev
+    ra = ease_back(prog(t, t_rev, 0.4))
+
+    chip(d, ctx, v.get("label", "QUICK QUIZ"), CX, Y0, ease_out(prog(t, 0, 0.3)), color=ctx.theme.accent2)
+    y = Y0 + 130
+    if prompt:
+        fp, pl, psize = fit_wrapped(prompt, SW, 140, 56, "SemiBold")
+        for i, l in enumerate(pl):
+            draw_text(d, (CX, y + psize * 0.6 + i * psize * 1.15), l, fp, ctx.theme.muted, anchor="mm",
+                      alpha=prog(t, 0.1, 0.3))
+        y += len(pl) * psize * 1.15 + 40
+    # question with blank / answer
+    shown = question.replace("___", options[ans] if revealed else "___") if options else question
+    tokens = [(w, "___" in w or (revealed and options and w.strip(".,!?") == options[ans]))
+              for w in shown.split()]
+    fq, ql = fit_tokens(tokens, SW, 300, 112, "Black")
+    draw_emph_lines(d, ql, fq, y, ctx, reveal=1.0, base_color=ctx.theme.text,
+                    emph_color=ctx.theme.accent if revealed else ctx.theme.accent2)
+    y += len(ql) * fq.size * 1.14 + 60
+    # options
+    n = max(1, len(options))
+    ow = (SW - 40 * (n - 1)) / n
+    oh = 150
+    for i, o in enumerate(options):
+        a = ease_back(prog(t, 0.35 + i * 0.12, 0.4))
+        x0 = X0 + i * (ow + 40)
+        right = i == ans
+        if revealed and right:
+            fill, txt_col = ctx.theme.accent, ctx.theme.bg_top
+        else:
+            fill, txt_col = ctx.theme.panel, ctx.theme.text
+        alpha = clamp(a) * (0.45 if revealed and not right else 1.0)
+        pop = 1 + 0.06 * math.sin(math.pi * clamp(ra)) if (revealed and right) else 1
+        cx = x0 + ow / 2
+        w2, h2 = ow * pop / 2, oh * pop / 2
+        rrect(d, (cx - w2, y + oh / 2 - h2, cx + w2, y + oh / 2 + h2), 36, fill=fill, alpha=alpha)
+        if not (revealed and right):
+            rrect(d, (cx - w2, y + oh / 2 - h2, cx + w2, y + oh / 2 + h2), 36, outline=ctx.theme.muted, width=3,
+                  alpha=alpha)
+        fo = fit_font(o, ow - 60, 76, "Black")
+        draw_text(d, (cx, y + oh / 2), o, fo, txt_col, anchor="mm", alpha=alpha)
+        if revealed and right:
+            _check(d, cx + w2 - 46, y + 40, 40, ctx.theme.bg_top)
+        if revealed and not right:
+            d.line([(cx - w2 + 30, y + oh / 2), (cx + w2 - 30, y + oh / 2)], fill=(*ctx.theme.bad, int(255 * alpha)),
+                   width=6)
+    y += oh + 70
+    # countdown ring before the reveal, meaning after
+    if not revealed and t >= t_rev - cd:
+        frac = clamp((t_rev - t) / cd)
+        r = 70
+        d.ellipse((CX - r, y, CX + r, y + 2 * r), outline=(*ctx.theme.panel, 255), width=12)
+        d.arc((CX - r, y, CX + r, y + 2 * r), -90, -90 + 360 * frac, fill=(*ctx.theme.accent2, 255), width=12)
+        secs = str(int(math.ceil((t_rev - t) - 1e-6)))
+        draw_text(d, (CX, y + r), secs, font(64, "Black"), ctx.theme.text, anchor="mm")
+    meaning = ctx.txt(v.get("meaning", ""))
+    if revealed and meaning:
+        fm, ml, msize = fit_wrapped(meaning, SW, 150, 54, "SemiBold")
+        for i, l in enumerate(ml):
+            draw_text(d, (CX, y + 30 + msize * 0.6 + i * msize * 1.15), l, fm, ctx.theme.text, anchor="mm",
+                      alpha=clamp(ra))
+
+
 RENDERERS = {
     "hook": hook, "counter": counter, "bars": bars, "donut": donut, "grid": grid, "line": line,
     "quote": quote, "compare": compare, "statement": statement, "end": end,
+    "phrase": phrase, "list": list_, "quiz": quiz,
 }

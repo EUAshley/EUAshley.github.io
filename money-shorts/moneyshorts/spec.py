@@ -13,6 +13,7 @@ import yaml
 
 SCENE_TYPES = {
     "hook", "counter", "bars", "donut", "grid", "line", "quote", "compare", "statement", "end",
+    "phrase", "list", "quiz",
 }
 CONFIDENCE = {"official", "reported", "estimate", "calc"}
 
@@ -59,6 +60,15 @@ class Scene:
 
 
 @dataclass
+class GlossaryEntry:
+    phrase: str
+    lang: str
+    meaning: str
+    sources: list[str] = field(default_factory=list)
+    note: str = ""
+
+
+@dataclass
 class Episode:
     id: str
     title: str
@@ -71,10 +81,12 @@ class Episode:
     publish: dict[str, Any]
     path: Path
     variants: dict[str, Any] = field(default_factory=dict)
+    glossary: list[GlossaryEntry] = field(default_factory=list)
 
     @property
     def narration(self) -> str:
-        return " ".join(s.say for s in self.scenes)
+        from .lang import strip_markup
+        return " ".join(strip_markup(s.say) for s in self.scenes)
 
 
 def _req(d: dict, key: str, where: str):
@@ -151,4 +163,11 @@ def load_episode(path: str | Path) -> Episode:
         publish=dict(raw.get("publish") or {}),
         path=path,
         variants=dict(raw.get("variants") or {}),
+        glossary=[GlossaryEntry(
+            phrase=_req(g, "phrase", f"{where} glossary"),
+            lang=g.get("lang", "es"),
+            meaning=_req(g, "meaning", f"{where} glossary {g.get('phrase')}"),
+            sources=list(g.get("sources") or []),
+            note=g.get("note", ""),
+        ) for g in (raw.get("glossary") or [])],
     )

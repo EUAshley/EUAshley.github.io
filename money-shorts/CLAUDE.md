@@ -74,6 +74,27 @@ Script rules: short sentences; one number per sentence where possible; no
 | statement | kinetic text | `text` (`*emphasis*`), `sub` |
 | end | reframe + CTA | `text`, `sub`, `cta` |
 
+| phrase | foreign phrase + translation | `label`, `text` (`*key*`), `meaning`, `meaning_at`, `gloss` |
+| list | vocab / rule rows lit as spoken | `title`, `items[{text,meaning,at}]`, `sync_from` |
+| quiz | question, countdown, reveal | `prompt`, `question` (`___`), `options`, `answer`, `reveal`, `countdown`, `meaning` |
+
+Timing fields that take an **int** mean "start of narration sentence N"
+(0-based, `[pause]` doesn't count); floats are seconds.
+
+## Language-learning episodes
+
+Same pipeline, with these differences:
+- Narration markup: `<es>…</es>` for anything spoken in Spanish (native voice from
+  `voice.alt.es`), `[pause 2]` for thinking time. Keep numbers out of foreign runs.
+- Research: two independent teaching references per rule (SpanishDict, Kwiziq,
+  Coffee Break Languages, …), plus RAE / Instituto Cervantes for edge cases.
+- Every spoken foreign phrase goes in `glossary:` with its meaning and sources.
+  The gate (E6) fails the build otherwise. Accents matter (`esta` ≠ `está`).
+- Arc: the embarrassing mistake → the rule → examples that flip meaning →
+  1–2 surprising exceptions → quiz (answer revealed on cue) → one-line rule.
+- Give phrase scenes enough `hold:` time to read the explanation after the
+  foreign phrase is spoken (about 1–1.5 s).
+
 ## Output (in `out/<id>/`, git-ignored)
 
 `final.mp4` (1080×1920, 30 fps, H.264/AAC, −14 LUFS) · `captions.srt` ·

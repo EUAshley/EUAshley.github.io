@@ -39,7 +39,7 @@ def _engine():
 
 
 def split_sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z$\d\"'])", text.strip())
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z$\d\"'<¿¡])", text.strip())
     return [p.strip() for p in parts if p.strip()]
 
 
@@ -53,7 +53,7 @@ def trim(audio: np.ndarray, thresh: float = 0.012, pad: float = 0.03) -> np.ndar
 
 
 def synth(text: str, voice: str, speed: float, lang: str = "en-us") -> np.ndarray:
-    spoken = speakable(text)
+    spoken = speakable(text) if lang.startswith("en") else text.strip()
     key = hashlib.sha1(f"{voice}|{speed}|{lang}|{spoken}".encode()).hexdigest()[:16]
     CACHE.mkdir(parents=True, exist_ok=True)
     path = CACHE / f"{key}.wav"
@@ -68,10 +68,20 @@ def synth(text: str, voice: str, speed: float, lang: str = "en-us") -> np.ndarra
 
 
 @dataclass
-class Sentence:
-    text: str   # display text (digits), used for captions
+class Run:
+    """A same-language stretch of a sentence, with exact audio timing."""
+    text: str   # display text (digits kept), used for captions
+    lang: str
     start: float
     end: float
+
+
+@dataclass
+class Sentence:
+    text: str
+    start: float
+    end: float
+    runs: list[Run]
 
 
 @dataclass
@@ -84,15 +94,43 @@ class SceneAudio:
         return len(self.audio) / SR
 
 
-def narrate(text: str, voice: str = "af_heart", speed: float = 1.05) -> SceneAudio:
+KOKORO_LANG = {"en": "en-us", "es": "es", "fr": "fr-fr", "it": "it", "pt": "pt-br", "hi": "hi", "ja": "ja"}
+RUN_GAP = 0.08
+
+
+def narrate(text: str, voice: str = "af_heart", speed: float = 1.05, alt: dict | None = None) -> SceneAudio:
+    """Synthesize a scene. `alt` maps language code -> {name, speed} for <xx>...</xx> runs."""
+    from .lang import PAUSE_RE, segments
+
+    alt = alt or {}
     chunks, sents, t = [], [], 0.0
-    gap = np.zeros(int(SENTENCE_GAP * SR), dtype=np.float32)
-    for i, s in enumerate(split_sentences(text)):
-        if i:
-            chunks.append(gap)
-            t += SENTENCE_GAP
-        a = synth(s, voice, speed)
-        chunks.append(a)
-        sents.append(Sentence(s, t, t + len(a) / SR))
-        t += len(a) / SR
+    first = True
+    pieces = PAUSE_RE.split(text)  # [text, secs, text, secs, ...]
+    for i, piece in enumerate(pieces):
+        if i % 2 == 1:
+            sil = float(piece)
+            chunks.append(np.zeros(int(sil * SR), dtype=np.float32))
+            t += sil
+            continue
+        for s in split_sentences(piece):
+            if not first:
+                chunks.append(np.zeros(int(SENTENCE_GAP * SR), dtype=np.float32))
+                t += SENTENCE_GAP
+            first = False
+            s_start, runs = t, []
+            for j, seg in enumerate(segments(s)):
+                if j:
+                    chunks.append(np.zeros(int(RUN_GAP * SR), dtype=np.float32))
+                    t += RUN_GAP
+                if seg.lang == "en":
+                    v, sp = voice, speed
+                else:
+                    if seg.lang not in alt:
+                        raise ValueError(f"no voice configured for <{seg.lang}> (add voice.alt.{seg.lang})")
+                    v, sp = alt[seg.lang]["name"], float(alt[seg.lang].get("speed", 1.0))
+                a = synth(seg.text, v, sp, KOKORO_LANG.get(seg.lang, seg.lang))
+                chunks.append(a)
+                runs.append(Run(seg.text, seg.lang, t, t + len(a) / SR))
+                t += len(a) / SR
+            sents.append(Sentence(" ".join(r.text for r in runs), s_start, t, runs))
     return SceneAudio(np.concatenate(chunks) if chunks else np.zeros(1, np.float32), sents)

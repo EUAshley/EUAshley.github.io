@@ -9,6 +9,7 @@ Rules (errors block the build, warnings are reported):
   W1  'official' facts should have a primary source or two independent sources
   W2  'reported' facts should be hedged ("reportedly", "about"...)
   W3  facts with recorded source conflicts are listed for review
+  E6  every foreign-language phrase spoken (<es>...</es>) must be in the sourced glossary
   W4  facts that no scene uses
 """
 from __future__ import annotations
@@ -19,6 +20,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from .lang import foreign_phrases, normalize, strip_markup
 from .numbers import bare_digits, find_numbers, template_refs
 from .spec import Episode
 
@@ -28,6 +30,9 @@ HEDGES = re.compile(
     re.IGNORECASE,
 )
 
+# timing / layout settings, not data claims
+LAYOUT_KEYS = {"at", "sync_from", "reveal", "meaning_at", "countdown", "answer", "size", "min_duration",
+               "count_time", "cols", "from"}
 VISUAL_NUMERIC_KEYS = {"value", "values", "points", "a", "b", "segments", "items"}
 
 
@@ -98,6 +103,8 @@ def _visual_literals(obj: Any, key: str = "", path: str = "") -> list[str]:
             out += _visual_literals(x, key, f"{path}[{i}]")
     elif isinstance(obj, dict):
         for k, v in obj.items():
+            if k in LAYOUT_KEYS:
+                continue
             out += _visual_literals(v, k if k in VISUAL_NUMERIC_KEYS else key, f"{path}.{k}" if path else k)
     return out
 
@@ -169,7 +176,7 @@ def check(ep: Episode) -> Report:
         used.update(f.id for f in cited)
 
         # E1: every spoken number is backed by a cited fact
-        for tok in find_numbers(sc.say):
+        for tok in find_numbers(strip_markup(sc.say)):
             hit = next((f for f in cited for c in tok.candidates() if close(c, f.value, f.tolerance)), None)
             if hit:
                 rep.claims.append({"scene": sc.id, "text": tok.text, "fact": hit.id})
@@ -184,7 +191,7 @@ def check(ep: Episode) -> Report:
                 rep.errors.append(f"E1 scene '{sc.id}': '{tok.text}' is not backed by any fact")
 
         # E4 / W2: hedging
-        hedged = bool(HEDGES.search(sc.say))
+        hedged = bool(HEDGES.search(strip_markup(sc.say)))
         for f in cited:
             if f.confidence == "estimate" and not hedged:
                 rep.errors.append(f"E4 scene '{sc.id}' states estimate '{f.id}' without a hedge word")
@@ -210,6 +217,22 @@ def check(ep: Episode) -> Report:
                 used.add(ref)
                 if ref not in sc.facts:
                     sc.facts.append(ref)
+
+    # E6: language examples must be vetted
+    gloss = {(g.lang, normalize(g.phrase)): g for g in ep.glossary}
+    for g in ep.glossary:
+        if not g.sources:
+            rep.errors.append(f"E6 glossary phrase '{g.phrase}' has no source")
+        for sid in g.sources:
+            if sid not in sources:
+                rep.errors.append(f"E6 glossary phrase '{g.phrase}' cites unknown source '{sid}'")
+    for sc in ep.scenes:
+        for lang, phrase in foreign_phrases(sc.say):
+            g = gloss.get((lang, normalize(phrase)))
+            if not g:
+                rep.errors.append(f"E6 scene '{sc.id}' speaks <{lang}>{phrase}</{lang}> which is not in the glossary")
+            else:
+                rep.claims.append({"scene": sc.id, "text": phrase, "fact": f"glossary: {g.meaning}"})
 
     # facts used only by platform variants (see platforms.py) count as used
     for var in (ep.variants or {}).values():
@@ -253,6 +276,11 @@ def report_markdown(ep: Episode, rep: Report) -> str:
                      + (f" · sources: {', '.join(f.sources)}" if f.sources else ""))
         if f.conflicts:
             lines.append(f"  - conflict: {f.conflicts}")
+    if ep.glossary:
+        lines += ["", "## Glossary (language examples)", ""]
+        for g in ep.glossary:
+            lines.append(f"- **{g.phrase}** ({g.lang}) = {g.meaning} · sources: {', '.join(g.sources)}"
+                         + (f" — {g.note}" if g.note else ""))
     lines += ["", "## Sources", ""]
     for s in ep.sources.values():
         lines.append(f"- **{s.id}** {'(primary) ' if s.primary else ''}{s.publisher}, "

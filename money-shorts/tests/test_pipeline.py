@@ -131,3 +131,49 @@ def test_bad_variant_anchor_is_rejected(tmp_path):
     p.write_text(COSTCO.read_text().replace("      - after: fees", "      - after: nope"))
     with pytest.raises(Exception):
         apply_variant(load_episode(p), "tiktok")
+
+
+# ------------------------------------------------------------ language episodes
+
+from moneyshorts.captions import Word  # noqa: E402
+from moneyshorts.lang import normalize, segments, strip_markup  # noqa: E402
+from moneyshorts.tts import split_sentences  # noqa: E402
+
+SPANISH = ROOT / "episodes" / "spanish-ser-estar.yaml"
+
+
+def test_markup_parsing():
+    say = "<es>Estoy aburrido</es> means I'm bored. Which verb? [pause 2.2] <es>El café está frío</es>."
+    assert strip_markup(say) == "Estoy aburrido means I'm bored. Which verb? El café está frío."
+    sents = split_sentences(say.split("[pause")[0])
+    assert sents == ["<es>Estoy aburrido</es> means I'm bored.", "Which verb?"]
+    segs = segments("But <es>soy aburrido</es>?")
+    assert [(s.text, s.lang) for s in segs] == [("But", "en"), ("soy aburrido?", "es")]
+    assert normalize("¿Está listo?") == "está listo" != normalize("Esta listo")  # accents matter
+
+
+def test_spanish_episode_and_tiktok_variant_pass():
+    ep = load_episode(SPANISH)
+    rep = check(ep)
+    assert rep.ok, rep.errors
+    assert all(c["fact"].startswith("glossary:") for c in rep.claims)
+    assert check(apply_variant(ep, "tiktok")).ok
+
+
+def test_gate_rejects_unvetted_foreign_phrase(tmp_path):
+    p = tmp_path / "ep.yaml"
+    p.write_text(SPANISH.read_text().replace("<es>Está muerto</es>.", "<es>Es muerto</es>."))
+    errs = check(load_episode(p)).errors
+    assert any(e.startswith("E6") and "Es muerto" in e for e in errs)
+
+
+def test_pause_digits_are_not_claims():
+    ep = load_episode(SPANISH)
+    quiz = next(s for s in ep.scenes if s.type == "quiz")
+    assert "[pause" in quiz.say and check(ep).ok
+
+
+def test_foreign_words_get_their_own_caption_chunks():
+    words = [Word("Estoy", 0, .3, "es"), Word("aburrido", .3, .8, "es"), Word("means", .9, 1.1),
+             Word("I'm", 1.1, 1.3), Word("bored.", 1.3, 1.6)]
+    assert [c.text for c in chunk_words(words)] == ["Estoy aburrido", "means I'm bored."]

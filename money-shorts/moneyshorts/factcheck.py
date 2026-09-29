@@ -211,6 +211,12 @@ def check(ep: Episode) -> Report:
                 if ref not in sc.facts:
                     sc.facts.append(ref)
 
+    # facts used only by platform variants (see platforms.py) count as used
+    for var in (ep.variants or {}).values():
+        for raw in (var or {}).get("add_scenes") or []:
+            used.update(raw.get("facts") or [])
+            used.update(r for r in _visual_refs(raw.get("visual") or {}) if r in facts)
+
     # calc inputs count as used
     for f in facts.values():
         if f.calc and f.id in used:

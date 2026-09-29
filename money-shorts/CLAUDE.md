@@ -19,6 +19,7 @@ thinking "I didn't know that" / "now I get how that works".
 | 6. Script | 110–150 words (~45–58 s at speed 1.15). Numbers as digits in `say:`. | `say:` |
 | 7. Visuals | Choose a scene type per beat; pull numbers via `@fact` / `{fact:fmt}`. | `visual:` |
 | 8–12. Narration, captions, assembly, edit, render | `python -m moneyshorts build episodes/<id>.yaml` | `out/<id>/final.mp4` |
+| 13. Release | `python -m moneyshorts release <file>`. If TikTok's cut is under 61 s, add a `variants.tiktok.add_scenes` beat (one more sourced fact). Never pad with filler or silence. | `renders/<id>.<platform>.*` |
 | QA | Look at `out/<id>/storyboard.png` and `thumbnail.png` (Read tool). Fix overlaps / weak beats and rebuild. | |
 
 Commands (run from `money-shorts/`):
@@ -29,6 +30,7 @@ python -m moneyshorts check <file>      # fact-check gate only (fast)
 python -m moneyshorts script <file>     # print script + runtime estimate
 python -m moneyshorts preview <file>    # ~1 min half-res render for layout review
 python -m moneyshorts build <file>      # final render + publish kit
+python -m moneyshorts release <file>    # per-platform cuts + publish kits (YouTube, TikTok, Instagram, LinkedIn)
 python -m pytest -q tests               # pipeline tests
 ```
 
@@ -78,4 +80,22 @@ Script rules: short sentences; one number per sentence where possible; no
 `thumbnail.png` · `storyboard.png` · `factcheck.md` · `publish.md` (title,
 description, hashtags, sources, script) · `narration.wav` · `build.json`.
 
-Copy the finished `final.mp4` to `renders/<id>.mp4` and set the episode's `status: rendered`.
+`release` copies unique cuts and every platform's publish kit into `renders/`. Set the episode's `status: rendered`.
+
+## Platform variants
+
+```yaml
+variants:
+  tiktok:
+    add_scenes:
+      - after: <scene id>        # omit to insert before the closing scene
+        id: extra-beat
+        type: counter
+        say: ...                 # fact-checked like every other scene
+        facts: [...]
+        visual: {...}
+    drop_scenes: [<scene id>]
+    publish: {title: ..., description: ..., hashtags: [...]}
+```
+
+Platform rules live in `moneyshorts/platforms.py` (`PLATFORMS`).

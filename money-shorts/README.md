@@ -20,7 +20,34 @@ scripts/setup.sh                                        # ffmpeg, deps, Kokoro v
 python -m moneyshorts check episodes/costco-membership.yaml
 python -m moneyshorts build episodes/costco-membership.yaml
 # -> out/costco-membership/final.mp4 (+ captions.srt, thumbnail.png, storyboard.png, publish.md, factcheck.md)
+
+python -m moneyshorts release episodes/costco-membership.yaml   # one cut + publish kit per platform
 ```
+
+## Multi-platform release
+
+`release` builds a video and a ready-to-paste publish kit for **YouTube
+Shorts, TikTok, Instagram Reels and LinkedIn**. Use `--platforms tiktok,youtube`
+to pick a subset.
+
+- **Platform rules:** each platform's length limits, caption and title
+  limits, hashtag count and source-list style are in `moneyshorts/platforms.py`.
+  The build fails *before* rendering if a cut is too short or too long, or if
+  a caption is over the limit.
+- **Variants:** an episode can change any platform's cut with a `variants:`
+  block (`add_scenes`, `drop_scenes`, `publish` overrides). Added scenes go
+  through the same fact-check gate.
+- **TikTok:** Creator Rewards only pays for videos over 1 minute, so the
+  TikTok cut must run 61 s or more. The Costco episode adds a fact-checked
+  Executive-tier scene for it (64.8 s).
+- **Shared renders:** platforms with identical scene lists share one render
+  instead of re-rendering.
+- **Sources:** YouTube and LinkedIn get the full source list with links.
+  TikTok gets publisher names, since its caption links aren't clickable.
+  Instagram gets a first comment with the sources.
+- **Output:** `out/<id>/release/<platform>/` for each platform, plus a
+  `release.md` summary. Unique cuts and every platform's `publish.md` are
+  copied to `renders/`.
 
 To make a new video, open a Claude Code session in this repo and say something like
 *"Make a Money Shorts episode: why printer companies sell printers cheap."*
@@ -65,9 +92,12 @@ It warns on single-source claims, unhedged "reported" claims, and source conflic
 
 ## Rendered episodes
 
-| Episode | Video | Length |
-|---|---|---|
-| How Costco actually makes its money | [`renders/costco-membership.mp4`](renders/costco-membership.mp4) | 58.6 s |
+| Episode | Cut | Used for | Length |
+|---|---|---|---|
+| How Costco actually makes its money | [`costco-membership.youtube.mp4`](renders/costco-membership.youtube.mp4) | YouTube Shorts, Instagram Reels, LinkedIn | 58.6 s |
+| | [`costco-membership.tiktok.mp4`](renders/costco-membership.tiktok.mp4) | TikTok (+1 scene, over 1 minute) | 64.8 s |
+
+Each platform's title, caption, hashtags and upload checklist are in `renders/costco-membership.<platform>.publish.md`.
 
 ## Known limits
 
@@ -81,5 +111,8 @@ It warns on single-source claims, unhedged "reported" claims, and source conflic
   sites) are blocked by this cloud environment's network policy, so figures
   from those pages were checked through search excerpts plus independent
   coverage. The fact ledger records this.
-- Uploading to platforms is not automated. `publish.md` holds the title,
-  description, hashtags and source list, ready to paste.
+- Uploading to platforms is not automated. Each platform's `publish.md` holds
+  its title, caption, hashtags and sources, ready to paste.
+- Platform rules (limits, the TikTok 1-minute threshold, AI-label policies)
+  reflect guidance as of late 2025 and change often. Check them before relying
+  on them, and update `PLATFORMS` if needed.

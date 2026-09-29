@@ -70,6 +70,7 @@ class Episode:
     style: dict[str, Any]
     publish: dict[str, Any]
     path: Path
+    variants: dict[str, Any] = field(default_factory=dict)
 
     @property
     def narration(self) -> str:
@@ -80,6 +81,23 @@ def _req(d: dict, key: str, where: str):
     if key not in d or d[key] in (None, ""):
         raise SpecError(f"{where}: missing required field '{key}'")
     return d[key]
+
+
+def parse_scene(s: dict, i: int, where: str) -> Scene:
+    sid = s.get("id", f"scene{i + 1}")
+    stype = _req(s, "type", f"{where} scene {sid}")
+    if stype not in SCENE_TYPES:
+        raise SpecError(f"{where} scene {sid}: unknown type '{stype}' (use one of {sorted(SCENE_TYPES)})")
+    return Scene(
+        id=sid,
+        type=stype,
+        say=_req(s, "say", f"{where} scene {sid}").strip(),
+        facts=list(s.get("facts") or []),
+        visual=dict(s.get("visual") or {}),
+        source_note=s.get("source_note", ""),
+        allow_numbers=[str(n) for n in (s.get("allow_numbers") or [])],
+        hold=float(s.get("hold", 0.25)),
+    )
 
 
 def load_episode(path: str | Path) -> Episode:
@@ -117,22 +135,7 @@ def load_episode(path: str | Path) -> Episode:
             raise SpecError(f"{where} fact {fid}: confidence must be one of {sorted(CONFIDENCE)}")
         facts[fid] = fact
 
-    scenes = []
-    for i, s in enumerate(raw.get("scenes") or []):
-        sid = s.get("id", f"scene{i + 1}")
-        stype = _req(s, "type", f"{where} scene {sid}")
-        if stype not in SCENE_TYPES:
-            raise SpecError(f"{where} scene {sid}: unknown type '{stype}' (use one of {sorted(SCENE_TYPES)})")
-        scenes.append(Scene(
-            id=sid,
-            type=stype,
-            say=_req(s, "say", f"{where} scene {sid}").strip(),
-            facts=list(s.get("facts") or []),
-            visual=dict(s.get("visual") or {}),
-            source_note=s.get("source_note", ""),
-            allow_numbers=[str(n) for n in (s.get("allow_numbers") or [])],
-            hold=float(s.get("hold", 0.25)),
-        ))
+    scenes = [parse_scene(s, i, where) for i, s in enumerate(raw.get("scenes") or [])]
     if not scenes:
         raise SpecError(f"{where}: episode has no scenes")
 
@@ -147,4 +150,5 @@ def load_episode(path: str | Path) -> Episode:
         style=dict(raw.get("style") or {}),
         publish=dict(raw.get("publish") or {}),
         path=path,
+        variants=dict(raw.get("variants") or {}),
     )

@@ -47,6 +47,11 @@ sources:
     url: https://customerservice.costco.com/app/answers/answer_view/a_id/1013504/~/membership-fee-increase
     accessed: 2026-09-29
     primary: true
+  gurufocus_q4:
+    title: "Costco Wholesale Corp (COST) (Q4 2026) Earnings Call Highlights"
+    publisher: GuruFocus
+    url: https://www.gurufocus.com/news/9096652/costco-wholesale-corp-cost-q4-2026-earnings-call-highlights-doubledigit-sales-growth-digital-surge-and-membership-momentum
+    accessed: 2026-09-29
   fox_hotdog:
     title: Why Costco hot dogs have kept $1.50 price tag since 1985
     publisher: Fox Business
@@ -124,6 +129,22 @@ facts:
     unit: USD/year
     claim: Annual Gold Star (basic) membership fee in the US & Canada since Sept 1, 2024 (was $60)
     sources: [cnn_fee, costco_cs_fee]
+  exec_fee:
+    value: 130
+    unit: USD/year
+    claim: Annual Executive membership fee in the US & Canada since Sept 1, 2024 (was $120)
+    sources: [cnn_fee, costco_cs_fee]
+  exec_fee_multiple:
+    value: 2
+    unit: ratio
+    calc: exec_fee / gold_star_fee
+    claim: Executive fee is double the Gold Star fee
+  exec_members:
+    value: 42.3e6
+    unit: memberships
+    claim: Paid Executive memberships at fiscal year end (up 9.4%)
+    period: Aug 30, 2026
+    sources: [costco_pr, fool_q4, gurufocus_q4]
   hotdog_price:
     value: 1.50
     unit: USD
@@ -246,6 +267,34 @@ scenes:
       text: Costco isn't selling *groceries.* It's selling the *membership.*
       sub: The low prices are the product that sells the product.
       cta: Follow for more money math
+
+# ------------------------------------------------------------------ PLATFORM VARIANTS
+# `python -m moneyshorts release` builds one cut per platform. Platforms without
+# changes share the main render. TikTok's Creator Rewards needs 61s+, so its cut
+# adds one more fact-checked beat.
+variants:
+  tiktok:
+    add_scenes:
+      - after: fees
+        id: exec-tier
+        type: compare
+        say: And 42.3 million memberships pay double, $130 a year, for the Executive tier.
+        facts: [exec_members, exec_fee, exec_fee_multiple]
+        source_note: Costco FY2026 results; Costco fee schedule (Sept 2024)
+        visual:
+          top: {title: Gold Star, value: "{gold_star_fee:dollars}/yr", color: muted, sub: basic membership}
+          bottom: {title: Executive, value: "{exec_fee:dollars}/yr", color: accent, sub: "{exec_members:num} memberships"}
+    publish:
+      description: >
+        Costco sold $297B last year but kept only ~$3 of every $100 as profit.
+        The real engine: membership fees. $5.9B of them, equal to ~64% of its profit.
+        Would you still pay for the membership? 👇
+  linkedin:
+    publish:
+      description: >
+        Costco's FY2026 in one line: $303B of revenue, $9.2B of profit, and $5.9B of membership fees.
+        The low prices aren't the business model; they're the marketing for it.
+        92.3% of US & Canada members renew. That's a subscription business with a warehouse attached.
 
 publish:
   title: How Costco ACTUALLY makes money 🛒

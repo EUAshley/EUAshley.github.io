@@ -90,3 +90,44 @@ def test_caption_timing_is_monotonic():
     chunks = chunk_words(words)
     assert all(len(c.words) <= 3 for c in chunks)
     assert "00:00:01,000" in srt(chunks)
+
+
+# ------------------------------------------------------------ platforms
+
+from moneyshorts.platforms import PLATFORMS, apply_variant, publish_copy, signature  # noqa: E402
+
+
+def test_variants_fact_check_and_fit_caption_limits():
+    ep = load_episode(COSTCO)
+    for key, p in PLATFORMS.items():
+        v = apply_variant(ep, key)
+        assert check(v).ok, (key, check(v).errors)
+        assert publish_copy(v, p)["problems"] == [], key
+
+
+def test_tiktok_variant_inserts_scene_and_others_share_render():
+    ep = load_episode(COSTCO)
+    tt = apply_variant(ep, "tiktok")
+    ids = [s.id for s in tt.scenes]
+    assert ids[ids.index("fees") + 1] == "exec-tier"
+    assert len(tt.scenes) == len(ep.scenes) + 1
+    assert signature(apply_variant(ep, "youtube")) == signature(apply_variant(ep, "instagram")) == signature(ep)
+    assert signature(tt) != signature(ep)
+    assert [s.id for s in ep.scenes] == [s.id for s in load_episode(COSTCO).scenes]  # original untouched
+
+
+def test_platform_captions():
+    ep = load_episode(COSTCO)
+    yt = publish_copy(apply_variant(ep, "youtube"), PLATFORMS["youtube"])
+    tag_line = yt["caption"].split("\n\n")[1]
+    assert tag_line.split() == ["#shorts", "#costco", "#business"]  # YouTube: max 3, #shorts first
+    assert "https://" in yt["caption"]
+    ig = publish_copy(apply_variant(ep, "instagram"), PLATFORMS["instagram"])
+    assert "https://" not in ig["caption"] and "https://" in ig["first_comment"]
+
+
+def test_bad_variant_anchor_is_rejected(tmp_path):
+    p = tmp_path / "ep.yaml"
+    p.write_text(COSTCO.read_text().replace("      - after: fees", "      - after: nope"))
+    with pytest.raises(Exception):
+        apply_variant(load_episode(p), "tiktok")

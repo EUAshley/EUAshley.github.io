@@ -124,7 +124,8 @@ def render_frame(fi: int) -> bytes:
 # ------------------------------------------------------------ build
 
 def build(ep: Episode, out_dir: Path, workers: int | None = None, preview: bool = False,
-          force: bool = False) -> dict:
+          force: bool = False, limits: tuple[float, float] | None = None) -> dict:
+    """Render an episode. `limits` = (min_s, max_s): fail before rendering frames if violated."""
     out_dir.mkdir(parents=True, exist_ok=True)
     rep = check(ep)
     (out_dir / "factcheck.md").write_text(report_markdown(ep, rep))
@@ -132,6 +133,11 @@ def build(ep: Episode, out_dir: Path, workers: int | None = None, preview: bool 
         raise SystemExit("Fact-check FAILED — see " + str(out_dir / "factcheck.md") + "\n" + "\n".join(rep.errors))
 
     tl = build_timeline(ep)
+    if limits:
+        lo, hi = limits
+        if not (lo <= tl.duration <= hi):
+            raise SystemExit(f"{ep.id}: runtime {tl.duration:.1f}s is outside the allowed {lo:g}–{hi:g}s. "
+                             "Add or trim scenes in this platform's variant.")
     cuts = [s.start for s in tl.scenes[1:]]
     mixed = audiomod.mix(tl.voice, cuts, music=ep.style.get("music", True))
     wav = out_dir / "audio.wav"

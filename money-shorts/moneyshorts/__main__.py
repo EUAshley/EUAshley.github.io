@@ -4,6 +4,8 @@
   python -m moneyshorts script  episodes/<id>.yaml     # print script + timing estimate
   python -m moneyshorts preview episodes/<id>.yaml     # fast half-res render
   python -m moneyshorts build   episodes/<id>.yaml     # final 1080x1920 render + publish kit
+  python -m moneyshorts release episodes/<id>.yaml [--platforms youtube,tiktok,instagram,linkedin]
+                                                       # one cut + publish kit per platform
   python -m moneyshorts new     <id>                   # scaffold a new episode file
 """
 from __future__ import annotations
@@ -29,6 +31,12 @@ def main(argv=None):
         p.add_argument("--out", default=None)
         p.add_argument("--workers", type=int, default=None)
         p.add_argument("--force", action="store_true", help="render even if fact-check fails (drafts only)")
+    p = sub.add_parser("release")
+    p.add_argument("episode")
+    p.add_argument("--platforms", default="all", help="comma list or 'all'")
+    p.add_argument("--out", default=None)
+    p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--no-copy", action="store_true", help="don't copy results into renders/")
     p = sub.add_parser("new")
     p.add_argument("id")
     a = ap.parse_args(argv)
@@ -56,6 +64,17 @@ def main(argv=None):
         print(f"{'PASS' if rep.ok else 'FAIL'}: {len(rep.claims)} spoken claims checked, "
               f"{len(rep.errors)} errors, {len(rep.warnings)} warnings -> {out / 'factcheck.md'}")
         sys.exit(0 if rep.ok else 1)
+
+    if a.cmd == "release":
+        from .platforms import release, resolve_platforms
+        t0 = time.time()
+        res = release(ep, resolve_platforms(a.platforms), out / "release", workers=a.workers,
+                      renders_dir=None if a.no_copy else ROOT / "renders")
+        for r in res:
+            shared = f"(same cut as {r['shared_render_with']})" if r["shared_render_with"] else "(own cut)"
+            print(f"{r['platform']:>16}: {r['duration']:5.1f}s  {r['scenes']} scenes  {shared}  {r['video']}")
+        print(f"done in {time.time() - t0:.0f}s -> {out / 'release' / 'release.md'}")
+        return
 
     if a.cmd == "script":
         words = 0

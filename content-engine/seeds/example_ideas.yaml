@@ -1,0 +1,85 @@
+# Starter ideas for Daily Benefit Shorts. Load with:  engine seed
+# Scores are 1-5 first guesses; adjust them in the UI.
+# Steps are from memory: verify on a current iOS version before filming.
+
+ideas:
+  - title: Automatically text someone your ETA when you leave work
+    category: iPhone Shortcuts
+    problem_solved: Typing "leaving now, be home in 20" every day, often while walking to the car.
+    benefit: Your partner gets your ETA automatically the moment you leave work.
+    target_audience: Commuters, parents, anyone who texts "on my way" daily
+    hook: Your iPhone can text your ETA for you when you leave work.
+    tools: Shortcuts, Apple Maps
+    solution_steps: |
+      Open Shortcuts, go to Automation, tap New Automation
+      Choose Leave, pick your work location
+      Add the action Get Travel Time to Home
+      Add Send Message: "Leaving now, home in [Travel Time]"
+      Set it to Run Immediately
+    source: Personal use / common Reddit r/shortcuts request
+    research_notes: Check whether location automations run without confirmation on the current iOS version.
+    scores: {usefulness: 5, hook_strength: 5, demonstrability: 4, novelty: 4, production_ease: 4, monetization: 3, repeatability: 5}
+
+  - title: Turn photos into a PDF without any app
+    category: iPhone Features
+    problem_solved: Needing to send receipts or documents as one PDF and not knowing how.
+    benefit: Any set of photos becomes a single PDF in about ten seconds.
+    target_audience: Anyone submitting receipts, forms, or homework
+    hook: You don't need an app to turn photos into a PDF.
+    tools: Photos, Files
+    solution_steps: |
+      Select the photos in Photos and tap Share
+      Tap Print
+      Pinch outward on the preview to open it as a PDF
+      Tap Share, then Save to Files
+    source: Classic hidden iOS trick
+    scores: {usefulness: 5, hook_strength: 4, demonstrability: 5, novelty: 3, production_ease: 5, monetization: 2, repeatability: 4}
+
+  - title: Take a screenshot by tapping the back of your iPhone
+    category: iPhone Features
+    problem_solved: Awkward two-button screenshots, especially one-handed.
+    benefit: Double-tap the back of your phone to take a screenshot.
+    target_audience: All iPhone users
+    hook: Tap the back of your iPhone twice. Screenshot.
+    tools: Settings
+    solution_steps: |
+      Open Settings, then Accessibility
+      Tap Touch, then Back Tap
+      Choose Double Tap and select Screenshot
+    source: iOS accessibility feature
+    scores: {usefulness: 4, hook_strength: 5, demonstrability: 5, novelty: 3, production_ease: 5, monetization: 1, repeatability: 4}
+
+  - title: Log an expense in 3 seconds with one tap
+    category: Automations
+    problem_solved: Forgetting to track small purchases because opening a budgeting app is a hassle.
+    benefit: One tap asks the amount and category and saves it to a spreadsheet.
+    target_audience: People trying to budget
+    hook: This one-tap button tracks every coffee you buy.
+    tools: Shortcuts, Numbers
+    solution_steps: |
+      Create a new Shortcut with Ask for Input (Number) for the amount
+      Add Choose from Menu with your spending categories
+      Add Append to Text File or Add Row to a Numbers spreadsheet
+      Add the shortcut to your Home Screen
+    source: Budgeting subreddit pain point
+    scores: {usefulness: 4, hook_strength: 4, demonstrability: 4, novelty: 4, production_ease: 3, monetization: 4, repeatability: 4}
+
+  - title: Turn a rambling voice memo into a clean to-do list with AI
+    category: AI Tools
+    problem_solved: Ideas and tasks captured by voice never become an organized list.
+    benefit: Talk for a minute, get a prioritized to-do list back.
+    target_audience: Busy professionals, students
+    hook: Talk for 60 seconds, get a to-do list back.
+    tools: Voice Memos, Claude
+    solution_steps: |
+      Record your thoughts in a voice memo or dictate into the AI app
+      Paste or dictate into Claude with "Turn this into a prioritized to-do list"
+      Copy the list into Reminders or Notes
+    source: Own workflow
+    scores: {usefulness: 4, hook_strength: 4, demonstrability: 3, novelty: 3, production_ease: 4, monetization: 4, repeatability: 5}
+
+offers:
+  - type: shortcut_pack
+    name: Daily Benefit Shortcut Pack (planned)
+    terms: Placeholder for a future downloadable pack
+    link_category: iPhone Shortcuts

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ brand.name }}{% endblock %} · Content Engine</title>
+<style>
+  :root { --fg:#1d1d1f; --muted:#6e6e73; --line:#d2d2d7; --bg:#fff; --soft:#f5f5f7; --accent:#0066cc; --err:#b00020; --warn:#8a5a00; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#f5f5f7; --muted:#a1a1a6; --line:#424245; --bg:#1d1d1f; --soft:#2c2c2e; --accent:#4da3ff; --err:#ff6b6b; --warn:#ffbf47; } }
+  * { box-sizing: border-box; }
+  body { font: 14px/1.45 -apple-system, system-ui, sans-serif; color: var(--fg); background: var(--bg); margin: 0; }
+  header { display:flex; gap:16px; align-items:center; padding:10px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header strong { margin-right: 8px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  a { color: var(--accent); text-decoration: none; }
+  h1 { font-size: 22px; margin: 4px 0 12px; } h2 { font-size: 17px; margin: 24px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .wrap { overflow-x: auto; }
+  input, select, textarea, button { font: inherit; color: inherit; background: var(--bg); border:1px solid var(--line); border-radius:6px; padding:5px 7px; }
+  textarea { width: 100%; min-height: 54px; }
+  td textarea { min-height: 96px; }
+  button { background: var(--soft); cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  form.inline { display: inline; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin: 6px 0; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 16px; }
+  .field label { display:block; font-weight:600; font-size:12px; color:var(--muted); }
+  .muted { color: var(--muted); }
+  .pill { display:inline-block; padding:1px 8px; border-radius: 10px; background: var(--soft); border:1px solid var(--line); font-size:12px; }
+  .flash { padding: 8px 12px; border-radius: 6px; background: var(--soft); margin-bottom: 8px; }
+  .flash.error { color: var(--err); } .flash.warning { color: var(--warn); }
+  pre { white-space: pre-wrap; background: var(--soft); padding: 8px; border-radius: 6px; margin: 4px 0; }
+  .card { border:1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+</style>
+</head>
+<body>
+<header>
+  <strong>{{ brand.name }}</strong>
+  <a href="{{ url_for('index') }}">Dashboard</a>
+  <a href="{{ url_for('idea_list') }}">Ideas</a>
+  <a href="{{ url_for('idea_new') }}">+ New idea</a>
+  <a href="{{ url_for('queue_page') }}">Publish queue</a>
+  <a href="{{ url_for('offer_page') }}">Offers</a>
+  <a href="{{ url_for('report_page') }}">Report</a>
+</header>
+<main>
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ cat }}">{{ msg }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

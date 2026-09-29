@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Offers & revenue</h1>
+<p class="muted">Anything that can make money from content: affiliate links, referral programs, your own products, sponsors, newsletters.
+Link an offer to a category here, or to a single idea from the idea page.</p>
+<div class="wrap"><table>
+  <tr><th>Type</th><th>Offer</th><th>Program</th><th class="num">Clicks</th><th class="num">Conversions</th><th class="num">Revenue</th><th>Record revenue</th></tr>
+  {% for row in summary %}{% set o = row.offer %}
+  <tr>
+    <td><span class="pill">{{ o.type }}</span></td>
+    <td>{{ o.name }}{% if o.url %}<br><a href="{{ o.url }}">{{ o.url }}</a>{% endif %}{% if o.terms %}<br><span class="muted">{{ o.terms }}</span>{% endif %}</td>
+    <td>{{ o.program }}</td>
+    <td class="num">{{ row.clicks }}</td><td class="num">{{ row.conversions }}</td><td class="num">{{ row.revenue_cents|money }}</td>
+    <td><form method="post" action="{{ url_for('revenue_add', offer_id=o.id) }}" class="row">
+      <input type="date" name="date"><input name="clicks" placeholder="clicks" size="5">
+      <input name="conversions" placeholder="conv." size="4"><input name="revenue" placeholder="$" size="6">
+      <input name="publication_id" placeholder="pub #" size="4" title="Optional: attribute to a publication">
+      <button>Add</button></form></td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="muted">No offers yet.</td></tr>{% endfor %}
+</table></div>
+
+<h2>New offer</h2>
+<form method="post" class="grid">
+  <div class="field"><label>Type</label><select name="type">{% for t in offer_types %}<option>{{ t }}</option>{% endfor %}</select></div>
+  <div class="field"><label>Name *</label><input name="name" required></div>
+  <div class="field"><label>URL</label><input name="url"></div>
+  <div class="field"><label>Program</label><input name="program" placeholder="e.g. Amazon Associates"></div>
+  <div class="field"><label>Terms</label><input name="terms" placeholder="commission, cookie window"></div>
+  <div class="field"><label>Link to category</label><select name="category_id"><option value="">(none)</option>
+    {% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+  <div><button class="primary">Create offer</button></div>
+</form>
+{% endblock %}

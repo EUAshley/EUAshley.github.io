@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ "Edit idea #%d"|format(idea.id) if idea else "New idea" }}</h1>
+<form method="post">
+  <div class="grid">
+    <div class="field"><label>Title *</label><input name="title" required style="width:100%" value="{{ idea.title if idea else '' }}"></div>
+    <div class="field"><label>Category</label>
+      <select name="category">
+        <option value="">(none)</option>
+        {% for c in categories %}<option {% if idea and idea.category and idea.category.id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  {% set fields = [
+    ("hook", "Hook: the first sentence a viewer hears"),
+    ("problem_solved", "Problem solved: what's annoying today?"),
+    ("benefit", "Benefit: the outcome the viewer gets"),
+    ("target_audience", "Target audience"),
+    ("solution_steps", "Solution steps: one per line (drives the demo, shot list, and recording plan)"),
+    ("tools", "Tools / apps involved (comma-separated; used for hashtags and affiliate matching)"),
+    ("source", "Source / inspiration"),
+    ("research_notes", "Research notes: things to verify, alternatives, OS versions"),
+    ("notes", "Notes"),
+  ] %}
+  {% for name, label in fields %}
+  <div class="field" style="margin-top:8px"><label>{{ label }}</label>
+    <textarea name="{{ name }}" rows="{{ 5 if name == 'solution_steps' else 2 }}">{{ idea[name] if idea else '' }}</textarea></div>
+  {% endfor %}
+  <p><button class="primary">Save</button>
+     {% if idea %}<a href="{{ url_for('idea_detail', idea_id=idea.id) }}">Cancel</a>{% endif %}</p>
+</form>
+{% endblock %}

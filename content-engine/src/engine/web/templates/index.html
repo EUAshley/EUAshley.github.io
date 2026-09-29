@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard</h1>
+
+<h2>Pipeline</h2>
+<div class="row">
+  {% for status, n in report.pipeline %}
+    <a class="pill" href="{{ url_for('idea_list', status=status) }}">{{ status }}: {{ n }}</a>
+  {% endfor %}
+</div>
+
+<div class="grid">
+  <div>
+    <h2>Top of the idea queue</h2>
+    <table>
+      {% for idea, s in top %}
+      <tr><td class="num">{{ s.total if s.total is not none else '-' }}</td>
+          <td><a href="{{ url_for('idea_detail', idea_id=idea.id) }}">{{ idea.title }}</a></td></tr>
+      {% else %}<tr><td class="muted">No ideas waiting. <a href="{{ url_for('idea_new') }}">Add one</a>.</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div>
+    <h2>Waiting for your approval</h2>
+    <table>
+      {% for idea in in_review %}
+      <tr><td><a href="{{ url_for('idea_detail', idea_id=idea.id) }}#review">{{ idea.title }}</a></td></tr>
+      {% else %}<tr><td class="muted">Nothing in review.</td></tr>{% endfor %}
+    </table>
+    <h2>Publish queue</h2>
+    <table>
+      {% for p in queue %}
+      <tr><td>{{ p.scheduled_for or 'unscheduled' }}</td><td>{{ p.platform }}</td>
+          <td><a href="{{ url_for('idea_detail', idea_id=p.idea.id) }}#publications">{{ p.idea.title }}</a></td></tr>
+      {% else %}<tr><td class="muted">Queue is empty.</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+
+<h2>What's working <span class="muted">({{ report.n_measured }} measured videos)</span></h2>
+{% from "_perf_table.html" import perf_table %}
+{{ perf_table(report.by_category) }}
+<p><a href="{{ url_for('report_page') }}">Full report →</a></p>
+{% endblock %}

@@ -121,12 +121,54 @@
   <details><summary>Full voiceover</summary><pre>{{ package.voiceover }}</pre></details>
 {% else %}<p class="muted">No package yet.</p>{% endif %}
 
+<h2 id="video">Video</h2>
+{% set render = package.latest_render if package else none %}
+{% if package %}
+  <p class="muted">Record one clip per step{% if idea.steps %} ({{ idea.steps|length }}){% endif %}, then one clip of the result, in that order.
+    Clips are used in file-name order (iPhone recordings are named by time). Folder: <code>{{ clips_dir }}</code></p>
+  {% if clips %}
+    <ol>{% for c in clips %}<li>{{ c.name }}{% if loop.last and clips|length > idea.steps|length %} <span class="muted">(result)</span>{% endif %}</li>{% endfor %}</ol>
+  {% else %}<p class="muted">No clips yet.</p>{% endif %}
+  {% if renderable %}
+  <form method="post" action="{{ url_for('clips_upload', idea_id=idea.id) }}" enctype="multipart/form-data" class="row">
+    <input type="file" name="clips" accept="video/*,.mov,.mp4,.m4v" multiple required><button>Upload clips</button>
+  </form>
+  {% if clips %}
+  <div class="row">
+    <form method="post" action="{{ url_for('render_video', idea_id=idea.id) }}" class="row">
+      <label>Music <select name="music">
+        <option value="auto">auto ({{ 'rotate' if music_tracks else 'none available' }})</option>
+        <option value="none">none (add a sound in-app)</option>
+        {% for t in music_tracks %}<option>{{ t.name }}</option>{% endfor %}
+      </select></label>
+      <button class="primary">{{ 'Re-render' if render else 'Render video' }}</button>
+      <span class="muted">Takes about 30 seconds.</span>
+    </form>
+    <form method="post" action="{{ url_for('clips_clear', idea_id=idea.id) }}" class="inline"><button>Remove clips</button></form>
+  </div>
+  {% endif %}
+  {% endif %}
+  {% if render %}
+    <div class="row" style="align-items:flex-start">
+      <video src="{{ url_for('media', path=render.path) }}" poster="{{ url_for('media', path=render.cover_path) }}" controls playsinline preload="metadata" style="width:270px;height:480px;background:#000;border-radius:8px"></video>
+      <div>
+        <p><strong>{{ '%.0f'|format(render.seconds) }}s</strong> · {{ render.clip_count }} clips · music: {{ render.music or 'none' }} · {{ render.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+        <p><a href="{{ url_for('media', path=render.path) }}" download>Download video</a> ·
+           <a href="{{ url_for('media', path=render.cover_path) }}" download>Download cover</a></p>
+        {% for w in render.warnings %}<p class="flash warning">{{ w }}</p>{% endfor %}
+        <img src="{{ url_for('media', path=render.cover_path) }}" alt="cover" style="width:135px;border-radius:6px">
+      </div>
+    </div>
+  {% elif not renderable %}<p class="muted">No video rendered for this package.</p>{% endif %}
+{% else %}<p class="muted">Build a production package first.</p>{% endif %}
+
 <h2 id="review">Approval</h2>
 {% if idea.status == 'packaged' %}
-  <form method="post" action="{{ url_for('submit', idea_id=idea.id) }}"><button class="primary">Submit for review</button></form>
+  <form method="post" action="{{ url_for('submit', idea_id=idea.id) }}"><button class="primary">Submit for review</button>
+    {% if not render %}<span class="muted">No video yet: you'll be approving the brief only.</span>{% endif %}</form>
 {% elif idea.status == 'in_review' %}
   <form method="post" action="{{ url_for('review', idea_id=idea.id) }}" class="card">
-    <p>Review the package above. Only an approved package can enter the publish queue.</p>
+    <p>Review the package{{ ' and the video' if render else '' }} above. Only an approved package can enter the publish queue.</p>
     <textarea name="notes" placeholder="Notes (required context for changes)"></textarea>
     <div class="row">
       <button name="decision" value="approved" class="primary">Approve</button>

@@ -68,4 +68,23 @@ recording_prep:
   - Turn on Do Not Disturb / Focus so no notifications appear.
   - Clean home screen; hide personal info (contacts, addresses, messages).
   - Set display to light mode unless the demo looks better dark.
-  - Start Screen Recording from Control Center; record each step as its own clip.
+  - Start Screen Recording from Control Center; record each step as its own clip, in order.
+  - Don't trim anything; the auto-editor speeds up long clips and holds short ones.
+  - AirDrop the clips to your computer and upload them on the idea page (or put them in data/clips/idea-<id>/).
+
+# Auto-editor (text-only video with music). Every key is optional.
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  text_band: 340           # px at the top reserved for on-screen text
+  bottom_margin: 110
+  background: "#101014"
+  text_color: "#FFFFFF"
+  font: null               # path to a .ttf/.ttc; default is Arial/Helvetica Bold
+  step_seconds: {min: 2.5, max: 5}
+  result_seconds: {min: 3, max: 6}
+  max_speedup: 3           # long clips play up to 3x speed
+  words_per_second: 3.2    # reading speed used to time each text card
+  music_dir: assets/music  # royalty-free tracks you have the rights to use
+  music_volume: 0.8

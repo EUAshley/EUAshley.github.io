@@ -83,6 +83,42 @@ def export_cmd(idea_id, out):
         click.echo(text)
 
 
+@cli.command("clips")
+@click.argument("idea_id", type=int)
+def clips_cmd(idea_id):
+    """Show where to put an idea's clips and how they'll be used."""
+    from .services import rendering
+
+    with db.session_scope() as s:
+        idea = ideas.get_idea(s, idea_id)
+        click.echo(f"Folder: {rendering.clips_dir(idea)}")
+        click.echo(f"Expected: {len(idea.steps)} step clip(s) + 1 result clip, in recording order.")
+        for n, c in enumerate(rendering.list_clips(idea), 1):
+            click.echo(f"  {n}. {c.name}")
+
+
+@cli.command("render")
+@click.argument("idea_id", type=int)
+@click.option("--music", default="auto", show_default=True,
+              help="'auto' rotates tracks in assets/music, 'none' for silence, or a file name.")
+def render_cmd(idea_id, music):
+    """Auto-edit the clips into a finished text-only video (with music)."""
+    from . import video
+    from .services import rendering
+
+    with db.session_scope() as s:
+        idea = ideas.get_idea(s, idea_id)
+        try:
+            r = rendering.render_video(s, idea, music=music)
+        except (video.VideoError, ValueError) as e:
+            raise click.ClickException(str(e))
+        click.echo(f"Rendered {r.seconds:.1f}s video ({r.clip_count} clips, music: {r.music or 'none'})")
+        click.echo(f"  video: {config.PROJECT_ROOT / r.path}")
+        click.echo(f"  cover: {config.PROJECT_ROOT / r.cover_path}")
+        for w in r.warnings:
+            click.echo(f"  note: {w}")
+
+
 @cli.command("import-metrics")
 @click.argument("csv_paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
 def import_cmd(csv_paths):

@@ -6,11 +6,11 @@ from datetime import date
 from functools import wraps
 from pathlib import Path
 
-from flask import Flask, Response, flash, g, redirect, render_template, request, url_for
+from flask import Flask, Response, abort, flash, g, redirect, render_template, request, send_from_directory, url_for
 
-from .. import ai, config, db, generators, reports, scoring, workflow
+from .. import ai, config, db, generators, reports, scoring, video, workflow
 from ..models import OFFER_TYPES, Category, Idea, Offer
-from ..services import ai_assist, ideas, offers, performance, production, publishing, tracking
+from ..services import ai_assist, ideas, offers, performance, production, publishing, rendering, tracking
 
 MANUAL_TRANSITIONS = [workflow.SELECTED, workflow.SCORED, workflow.PARKED, workflow.REJECTED, workflow.IDEA]
 
@@ -54,7 +54,7 @@ def create_app() -> Flask:
                 result = fn(*args, **kwargs)
                 g.db.commit()
                 return result
-            except (workflow.WorkflowError, ValueError, LookupError, RuntimeError, KeyError) as e:
+            except (workflow.WorkflowError, ValueError, LookupError, RuntimeError, KeyError, video.VideoError) as e:
                 g.db.rollback()
                 flash(str(e), "error")
                 return redirect(request.referrer or url_for("index"))
@@ -113,6 +113,8 @@ def create_app() -> Flask:
             package=production.current_package(idea), approved=publishing.is_approved(idea),
             linked_offers=offers.offers_for_idea(g.db, idea), all_offers=g.db.query(Offer).all(),
             generators=generators.available(),
+            clips=rendering.list_clips(idea), clips_dir=rendering.clips_dir(idea),
+            music_tracks=rendering.music_tracks(idea.brand.slug), renderable=idea.status in rendering.RENDERABLE,
             manual_transitions=[t for t in MANUAL_TRANSITIONS if workflow.can_transition(idea.status, t)],
         )
 
@@ -193,6 +195,38 @@ def create_app() -> Flask:
         if package is None:
             return Response("No package yet", status=404)
         return Response(production.package_markdown(package), mimetype="text/markdown")
+
+    @app.post("/ideas/<int:idea_id>/clips")
+    @action
+    def clips_upload(idea_id):
+        idea = ideas.get_idea(g.db, idea_id)
+        saved = [rendering.save_clip(idea, f.filename, f) for f in request.files.getlist("clips") if f and f.filename]
+        flash(f"Saved {len(saved)} clip(s). They're used in file-name order.")
+        return redirect(url_for("idea_detail", idea_id=idea_id) + "#video")
+
+    @app.post("/ideas/<int:idea_id>/clips/clear")
+    @action
+    def clips_clear(idea_id):
+        rendering.clear_clips(ideas.get_idea(g.db, idea_id))
+        return redirect(url_for("idea_detail", idea_id=idea_id) + "#video")
+
+    @app.post("/ideas/<int:idea_id>/render")
+    @action
+    def render_video(idea_id):
+        idea = ideas.get_idea(g.db, idea_id)
+        r = rendering.render_video(g.db, idea, music=request.form.get("music", "auto"))
+        flash(f"Rendered a {r.seconds:.0f}s video" + (f" with {r.music}." if r.music else " with no music."))
+        for w in r.warnings:
+            flash(w, "warning")
+        return redirect(url_for("idea_detail", idea_id=idea_id) + "#video")
+
+    @app.get("/media/<path:path>")
+    def media(path):
+        """Serve rendered videos and covers (only from data/renders)."""
+        root = config.PROJECT_ROOT / "data" / "renders"
+        if not path.startswith("data/renders/"):
+            abort(404)
+        return send_from_directory(root, path[len("data/renders/"):])
 
     @app.post("/ideas/<int:idea_id>/submit")
     @action

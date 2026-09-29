@@ -24,10 +24,10 @@ def build_package_fields(idea: Idea, script: Script, brand: dict, offers: list[O
             span = (s["end"] - s["start"]) / len(steps)
             for i, step in enumerate(steps):
                 a, b = s["start"] + i * span, s["start"] + (i + 1) * span
-                shot_list.append({"time": f"{a:.0f}-{b:.0f}s", "section": f"{s['label']} {i + 1}/{len(steps)}",
+                shot_list.append({"key": "demo", "time": f"{a:.0f}-{b:.0f}s", "section": f"{s['label']} {i + 1}/{len(steps)}",
                                   "visual": f"Screen recording: {step}", "on_screen_text": f"{i + 1}. {step}"})
         else:
-            shot_list.append({"time": f"{s['start']}-{s['end']}s", "section": s["label"],
+            shot_list.append({"key": s["key"], "time": f"{s['start']}-{s['end']}s", "section": s["label"],
                               "visual": s.get("visual", ""), "on_screen_text": s.get("on_screen_text", "")})
     for n, shot in enumerate(shot_list, 1):
         shot["shot"] = n

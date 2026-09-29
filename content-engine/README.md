@@ -38,13 +38,45 @@ database (`data/demo.db`) and prints the report. To browse that database, run
 | 3. Select | **Ideas** (ranked) → idea → *Select for production* | You decide. The system only ranks. |
 | 4. Script | Idea page → *Generate script* | Template draft (or Claude, if configured). Edit inline; each save is a new version. |
 | 5. Package | *Build production package* | Shot list, recording steps, on-screen text, caption, hashtags, cover text, assets, monetization notes, time estimate. *Download as Markdown* gives you a filming brief. |
-| 6. Approve | *Submit for review* → Approve / Request changes / Reject | **The gate.** Only an approved package can be queued. Editing the script after approval revokes it. |
-| 7. Queue | *Add to publish queue* (per platform, optional date) | **Publish queue** page lists what's ready to post. |
-| 8. Publish | Post it yourself, then *Mark published* with the URL | |
-| 9. Measure | *Add snapshot* (views, saves, shares, …), repeat on day 1 / 7 / 30 | Or bulk: `engine import-metrics file.csv` |
-| 10. Learn | *Learnings* on the idea; **Report** page | Which categories, hook types, and platforms perform; which offers earn. |
+| 6. Record & render | Idea page → **Video** | Record the clips the brief lists (one per step, then the result), upload them, click **Render video**. You get a finished text-only vertical video with music, a cover image, and the caption. |
+| 7. Approve | *Submit for review* → Approve / Request changes / Reject | **The gate.** You watch the video and approve. Only an approved package can be queued. Editing the script after approval revokes it. |
+| 8. Queue | *Add to publish queue* (per platform, optional date) | **Publish queue** page lists what's ready to post. |
+| 9. Publish | Download the video + cover from the queue, post it with the caption and tracking link, then *Mark published* with the URL | |
+| 10. Measure | *Add snapshot* (views, saves, shares, …), repeat on day 1 / 7 / 30 | Or bulk: `engine import-metrics file.csv` |
+| 11. Learn | *Learnings* on the idea; **Report** page | Which categories, hook types, and platforms perform; which offers earn. |
 
 Useful CLI commands: `engine ideas` (ranked queue), `engine report`, `engine export-package <id> --out exports/x.md`.
+
+## Auto-editor: clips in, finished video out
+
+Videos are **text-only with music** (no voiceover). You record the screen; the editor does the rest.
+
+1. Follow the package's **Screen-recording instructions**: one clip per step, then a clip of the
+   result, in order. Don't trim; long clips are sped up (up to 3×) and short ones are held so the
+   text can be read.
+2. AirDrop the clips to your computer and upload them on the idea page (Video section), or copy them
+   into `data/clips/idea-<id>/`. Clips are used in **file-name order**; iPhone recordings are named by
+   time, so recording order just works.
+3. Click **Render video** (or `engine render <id>`). About 30 seconds later you have:
+   - `data/renders/idea-<id>/v<script>-p<package>.mp4`: 1080×1920, 30 fps, H.264 + AAC, ready for TikTok, Reels, and Shorts
+   - a `.jpg` cover with the cover text, and a `-caption.txt` with the caption + hashtags
+4. Watch it on the idea page, then submit for review. Rendering is only allowed before review, so
+   what you approve is exactly what gets posted.
+
+**Timeline:** hook (the result, with the hook text) → problem (text over a dimmed frame) → one segment
+per step (clip + numbered step text) → result (benefit text) → CTA (text over the frozen last frame).
+Text sits in a band at the top, so it never covers a tap. Timing comes from reading speed, so every
+card stays on screen long enough to read.
+
+**Music:** put royalty-free tracks you have the rights to use in `assets/music/` (not committed).
+Tracks rotate automatically, or pick one per video. Choose **none** to add a trending sound in the
+TikTok/Instagram app instead; the video then gets a silent audio track.
+
+**Look and feel:** the `video:` section of `config/brands/<brand>.yaml` sets size, colors, font,
+text-band height, reading speed, speed-up limits, and music volume.
+
+ffmpeg is bundled (via `imageio-ffmpeg`); a system ffmpeg is used if installed. `engine clips <id>`
+shows the folder and what's expected.
 
 ## Automation (Phase 2)
 
@@ -139,6 +171,7 @@ deploy. The UI and CLI are thin, so future automations call the same services.
 | `status_history` | Audit trail of every status change. |
 | `scripts` | Versioned; `sections` JSON (hook/problem/demo/result/cta with timing, voiceover, on-screen text, visual), `hook_type`, generator. |
 | `production_packages` | Everything needed to film and post; tied to an exact script version. |
+| `renders` | Finished videos from the auto-editor (path, cover, length, music, warnings), per package. |
 | `approvals` | Human decisions on a specific package. The queue requires the latest one to be `approved`. |
 | `publications` | One per platform post: status, schedule, URL, tracking link. |
 | `performance_snapshots` | Time-series metrics per publication (manual / csv / api). |
@@ -179,6 +212,8 @@ Monetization and product-opportunity detection from offer clicks and saves.
 
 ## Known MVP limits
 
+- The auto-editor can't film your phone: recording the clips is the one manual production step.
+  Posting is also manual (TikTok and Instagram require app review before an app can post).
 - The template generator produces a structured draft from your idea fields. It is not finished
   copy: expect to edit on-screen text and the problem line.
 - No authentication: this is meant to run on your own machine (`127.0.0.1`).

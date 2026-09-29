@@ -167,10 +167,31 @@ class ProductionPackage(Timestamped, Base):
         back_populates="package", cascade="all, delete-orphan", order_by="Approval.id"
     )
     publications: Mapped[list["Publication"]] = relationship(back_populates="package")
+    renders: Mapped[list["Render"]] = relationship(
+        back_populates="package", cascade="all, delete-orphan", order_by="Render.id"
+    )
 
     @property
     def latest_approval(self) -> Optional["Approval"]:
         return self.approvals[-1] if self.approvals else None
+
+    @property
+    def latest_render(self) -> Optional["Render"]:
+        return self.renders[-1] if self.renders else None
+
+
+class Render(Timestamped, Base):
+    """A finished video produced by the auto-editor for a package."""
+    __tablename__ = "renders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    package_id: Mapped[int] = mapped_column(ForeignKey("production_packages.id"))
+    path: Mapped[str] = mapped_column(Text)  # relative to the project root
+    cover_path: Mapped[str] = mapped_column(Text, default="")
+    seconds: Mapped[float] = mapped_column(Float, default=0)
+    clip_count: Mapped[int] = mapped_column(Integer, default=0)
+    music: Mapped[str] = mapped_column(Text, default="")  # track file name, or "" for none
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
+    package: Mapped["ProductionPackage"] = relationship(back_populates="renders")
 
 
 class Approval(Base):

@@ -8,7 +8,9 @@
   <tr>
     <td>{{ p.scheduled_for or 'unscheduled' }}</td><td>{{ p.platform }}</td>
     <td><a href="{{ url_for('idea_detail', idea_id=p.idea.id) }}#publications">{{ p.idea.title }}</a></td>
-    <td><a href="{{ url_for('package_md', idea_id=p.idea.id) }}">brief (.md)</a>
+    <td>{% if p.package.latest_render %}<a href="{{ url_for('media', path=p.package.latest_render.path) }}" download>video</a> ·
+        <a href="{{ url_for('media', path=p.package.latest_render.cover_path) }}" download>cover</a> · {% endif %}
+        <a href="{{ url_for('package_md', idea_id=p.idea.id) }}">brief (.md)</a>
         {% for l in p.tracking_links or [] %}{% if l.url %}<br><span class="muted">{{ l.offer }}:</span> <code>{{ l.url }}</code>{% endif %}{% endfor %}</td>
     <td><form class="inline" method="post" action="{{ url_for('pub_cancel', pub_id=p.id) }}"><button>Remove</button></form></td>
   </tr>

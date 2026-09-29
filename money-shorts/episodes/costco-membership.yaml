@@ -1,0 +1,256 @@
+id: costco-membership
+title: How Costco Actually Makes Its Money
+hook_question: Costco sells $297 billion of stuff a year. Why is that not really how it makes money?
+status: rendered   # idea -> researched -> scripted -> checked -> rendered -> published
+
+voice:
+  name: af_heart     # Kokoro voice (af_heart, af_bella, am_michael, am_fenrir, bm_george, ...)
+  speed: 1.18
+
+style:
+  kicker: How Costco makes money
+  music: true
+
+# ------------------------------------------------------------------ SOURCES
+sources:
+  costco_pr:
+    title: Costco Wholesale Corporation Reports Fourth Quarter and Fiscal Year 2026 Operating Results
+    publisher: Costco Wholesale (investor relations)
+    url: https://investor.costco.com/news/news-details/2026/Costco-Wholesale-Corporation-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Operating-Results/default.aspx
+    accessed: 2026-09-29
+    primary: true
+    note: Figures read from search-index excerpts of the release; direct page fetch was blocked by the build environment's network policy.
+  costco_8k:
+    title: Form 8-K, Exhibit 99.1 (FY2026 results press release)
+    publisher: U.S. SEC EDGAR
+    url: https://www.sec.gov/Archives/edgar/data/909832/000090983226000084/costex9918-k92426.htm
+    accessed: 2026-09-29
+    primary: true
+  shelby:
+    title: Costco Caps FY26 With $297.3B In Sales, Up 10.2 Percent
+    publisher: The Shelby Report
+    url: https://theshelbyreport.com/2026/09/15/costco-caps-fy26-with-297-3b-in-sales-up-10-2-percent/
+    accessed: 2026-09-29
+  fool_q4:
+    title: Costco (COST) Q4 2026 Earnings Call Transcript
+    publisher: The Motley Fool
+    url: https://www.fool.com/earnings/call-transcripts/2026/09/29/costco-cost-q4-2026-earnings-call-transcript/
+    accessed: 2026-09-29
+  cnn_fee:
+    title: Costco's first membership price hike in 7 years just went into effect
+    publisher: CNN Business
+    url: https://www.cnn.com/2024/09/03/business/costco-membership-fee-price-increase
+    accessed: 2026-09-29
+  costco_cs_fee:
+    title: Membership Fee Increase
+    publisher: Costco Customer Service
+    url: https://customerservice.costco.com/app/answers/answer_view/a_id/1013504/~/membership-fee-increase
+    accessed: 2026-09-29
+    primary: true
+  fox_hotdog:
+    title: Why Costco hot dogs have kept $1.50 price tag since 1985
+    publisher: Fox Business
+    url: https://www.foxbusiness.com/lifestyle/why-costco-hot-dogs-have-kept-1-50-price-tag-since-1985
+    accessed: 2026-09-29
+  snopes_quote:
+    title: Did Costco Founder Say 'I Will Kill You' to CEO Who Wanted To Raise Hot Dog Price?
+    publisher: Snopes
+    url: https://www.snopes.com/fact-check/costco-founder-kill-hotdogs/
+    accessed: 2026-09-29
+    note: Rated true, based on Craig Jelinek's own April 12, 2018 retelling.
+  acquired_markup:
+    title: Costco (Acquired Briefing)
+    publisher: Acquired Briefing
+    url: https://www.acquiredbriefing.com/p/costco
+    accessed: 2026-09-29
+  yahoo_kirkland:
+    title: How Costco Keeps Kirkland Signature Prices So Cheap
+    publisher: Yahoo Finance
+    url: https://www.yahoo.com/finance/news/costco-keeps-kirkland-signature-prices-123000186.html
+    accessed: 2026-09-29
+
+# ------------------------------------------------------------------ FACT LEDGER
+facts:
+  net_sales:
+    value: 297.2e9
+    unit: USD
+    claim: Costco net sales
+    period: FY2026 (52 weeks ended Aug 30, 2026)
+    sources: [costco_pr, costco_8k]
+    conflicts: The Shelby Report headline says $297.3B (from the Sept 2026 monthly sales release); the earnings release says $297.2B. Script says "$297 billion", which is true under both.
+  membership_fees:
+    value: 5.91e9
+    unit: USD
+    claim: Membership fee revenue
+    period: FY2026 (vs $5.32B in FY2025)
+    sources: [costco_pr, costco_8k]
+  net_income:
+    value: 9.226e9
+    unit: USD
+    claim: Net income attributable to Costco
+    period: FY2026 (vs $8.099B in FY2025); includes a one-time tariff-refund benefit of about $0.15/share in Q4
+    sources: [costco_pr, costco_8k]
+  total_revenue:
+    value: 303.11e9
+    unit: USD
+    calc: net_sales + membership_fees
+    claim: Total revenue (net sales + membership fees)
+    period: FY2026
+  profit_per_100:
+    value: 3.044
+    unit: USD
+    calc: net_income / total_revenue * 100
+    tolerance: 0.02
+    claim: Net profit per $100 of revenue
+  fee_share:
+    value: 0.6406
+    unit: ratio
+    calc: membership_fees / net_income
+    claim: Membership fees as a share of net income (fees are pre-tax revenue; net income is after tax — framed as "equal to", not "part of")
+  paid_members:
+    value: 84.1e6
+    unit: people
+    claim: Paid members at fiscal year end
+    period: Aug 30, 2026
+    sources: [costco_pr, fool_q4]
+  renewal_rate:
+    value: 0.923
+    unit: ratio
+    claim: US & Canada membership renewal rate
+    period: end of FY2026
+    sources: [costco_pr, fool_q4]
+  gold_star_fee:
+    value: 65
+    unit: USD/year
+    claim: Annual Gold Star (basic) membership fee in the US & Canada since Sept 1, 2024 (was $60)
+    sources: [cnn_fee, costco_cs_fee]
+  hotdog_price:
+    value: 1.50
+    unit: USD
+    claim: Price of the hot dog + soda combo
+    sources: [fox_hotdog, snopes_quote]
+    confidence: reported
+  hotdog_years:
+    value: 41
+    unit: years
+    calc: 2026 - 1985
+    tolerance: 0.05
+    claim: Years the combo has been $1.50 (since 1985) — spoken as "more than 40 years"
+  markup_brand:
+    value: 0.14
+    unit: ratio
+    claim: Reported maximum markup on brand-name items (company policy, not in SEC filings)
+    sources: [acquired_markup, yahoo_kirkland]
+    confidence: reported
+  markup_kirkland:
+    value: 0.15
+    unit: ratio
+    claim: Reported maximum markup on Kirkland Signature items
+    sources: [acquired_markup, yahoo_kirkland]
+    confidence: reported
+
+# ------------------------------------------------------------------ STORY / SCENES
+# Arc: hook (huge number) -> twist (tiny profit) -> make it tangible ($3 per $100)
+#      -> why (markup cap) -> the real engine (fees) -> payoff (fees vs profit)
+#      -> proof it works (renewals) -> memorable symbol (hot dog) -> reframe
+scenes:
+  - id: hook
+    type: hook
+    say: Over the past year, Costco sold $297 billion worth of stuff. But that's not really how it makes money.
+    facts: [net_sales]
+    source_note: Costco FY2026 results (52 weeks to Aug 30, 2026)
+    visual:
+      lines: ["COSTCO SOLD", "*{net_sales:money0}", "OF STUFF"]
+      sub: "…but that's not the business"
+
+  - id: thin-profit
+    type: compare
+    say: Out of $303 billion in total revenue, Costco kept just $9.2 billion as profit.
+    facts: [total_revenue, net_income]
+    source_note: Costco FY2026 results
+    visual:
+      top: {title: Total revenue, value: "{total_revenue:money0}", color: muted, sub: sales + membership fees}
+      bottom: {title: Profit, value: "{net_income:money1}", color: accent, sub: net income}
+
+  - id: per-100
+    type: grid
+    say: That's about $3 of profit for every $100 you spend.
+    facts: [profit_per_100]
+    allow_numbers: ["100"]
+    source_note: Net income ÷ total revenue, FY2026
+    visual:
+      title: For every $100 you spend at Costco…
+      total: 100
+      lit: "@profit_per_100"
+      lit_label: "≈ {profit_per_100:money0} is profit"
+
+  - id: markup
+    type: statement
+    say: Why so thin? Costco reportedly caps its markup at 14% on brand names, and 15% on its own Kirkland brand.
+    facts: [markup_brand, markup_kirkland]
+    source_note: Widely reported company policy (not in SEC filings)
+    visual:
+      text: "Markup cap: *{markup_brand:pct}* on brands. *{markup_kirkland:pct}* on Kirkland."
+      sub: A rule that dates back to its founders
+
+  - id: fees
+    type: counter
+    say: So where does the money come from? You, paying $65 a year just to walk in. That added up to $5.9 billion in fees.
+    facts: [gold_star_fee, membership_fees]
+    source_note: Costco FY2026 results; Costco fee schedule (Sept 2024)
+    visual:
+      value: "@membership_fees"
+      format: money1
+      label: Membership fees
+      sub: "from {paid_members:num} paying members at {gold_star_fee:dollars}+ a year"
+
+  - id: fees-vs-profit
+    type: bars
+    say: That's equal to about 64% of Costco's entire profit, before it sells you a single thing.
+    facts: [fee_share, membership_fees, net_income]
+    source_note: Fees (pre-tax revenue) compared with net income, FY2026
+    visual:
+      items:
+        - {label: Total profit, value: "@net_income", color: muted}
+        - {label: Membership fees, value: "@membership_fees", color: accent}
+      format: money1
+      callout: "Fees ≈ {fee_share:pct} of profit"
+
+  - id: renewals
+    type: counter
+    say: And people keep paying. 92.3% of members in the US and Canada renew.
+    facts: [renewal_rate]
+    source_note: Costco FY2026 results
+    visual:
+      value: "@renewal_rate"
+      format: pct1
+      label: Renewal rate
+      sub: US & Canada members
+
+  - id: hot-dog
+    type: quote
+    say: It's why the $1.50 hot dog hasn't changed price in over 40 years. When an executive suggested raising it, co-founder Jim Sinegal reportedly said, if you raise the effing hot dog, I will kill you.
+    facts: [hotdog_price, hotdog_years]
+    source_note: Fox Business; Snopes (Craig Jelinek's 2018 retelling)
+    visual:
+      tag: "{hotdog_price:dollars}"
+      text: If you raise the *effing* hot dog, I will *kill* you.
+      by: Jim Sinegal, Costco co-founder
+      note: as retold by former CEO Craig Jelinek
+
+  - id: reframe
+    type: end
+    say: Costco isn't really selling you groceries. It's selling you the membership.
+    facts: []
+    visual:
+      text: Costco isn't selling *groceries.* It's selling the *membership.*
+      sub: The low prices are the product that sells the product.
+      cta: Follow for more money math
+
+publish:
+  title: How Costco ACTUALLY makes money 🛒
+  description: >
+    Costco sold $297B last year but kept only ~$3 of every $100 as profit.
+    The real engine is membership fees: $5.9B, equal to ~64% of its profit.
+    All figures from Costco's FY2026 results (fiscal year ended Aug 30, 2026). Sources below.
+  hashtags: [costco, business, money, finance, economics, businessmodel, shorts]

@@ -1,0 +1,63 @@
+id: EPISODE_ID
+title: "Question-shaped title, e.g. Why are printer companies happy to sell printers cheap?"
+hook_question: "The one-sentence 'I didn't know that' this video pays off"
+status: idea   # idea -> researched -> scripted -> checked -> rendered -> published
+
+voice:
+  name: af_heart   # Kokoro voice; alternatives: af_bella, am_michael, am_fenrir, bm_george
+  speed: 1.15
+
+style:
+  kicker: Short topic label shown at the top
+  music: true
+  # theme: {accent: "#2EE59D", accent2: "#FFC247"}   # optional colour overrides
+
+# Every source you relied on. Prefer primary sources (filings, company releases,
+# government statistics) and mark them primary: true.
+sources:
+  example_src:
+    title: Document title
+    publisher: Publisher
+    url: https://example.com/report
+    accessed: 2026-01-01
+    primary: true
+    note: optional context (e.g. which table / page)
+
+# The fact ledger. Every number spoken or shown must come from here.
+#   confidence: official | reported | estimate | calc
+#   calc facts are recomputed by the checker, e.g. calc: revenue / customers
+#   tolerance: relative tolerance for rounding in speech (default 0.01 = 1%)
+facts:
+  example_fact:
+    value: 1.0e9
+    unit: USD
+    claim: What exactly this number measures
+    period: Which year / quarter / date
+    sources: [example_src]
+
+# Scenes: say = narration (write numbers as digits: $1.5 billion, 64%, 1985)
+# types: hook, counter, bars, donut, grid, line, quote, compare, statement, end
+# On-screen numbers: "@fact_id" for raw values, "{fact_id:fmt}" inside text
+#   fmt: money, money0, money1, money2, dollars, pct, pct1, num, num1, int, raw
+scenes:
+  - id: hook
+    type: hook
+    say: Hook sentence with a number like $1 billion.
+    facts: [example_fact]
+    source_note: Publisher, report name
+    visual:
+      lines: ["FIRST LINE", "*{example_fact:money}", "LAST LINE"]
+      sub: optional small line
+
+  - id: end
+    type: end
+    say: The reframe — the one idea the viewer should walk away with.
+    visual:
+      text: The *reframe* in one line.
+      cta: Follow for more money math
+
+publish:
+  title: Platform title
+  description: >
+    Two-sentence description with the key numbers and where they come from.
+  hashtags: [money, business, shorts]

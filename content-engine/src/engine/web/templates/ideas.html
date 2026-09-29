@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Ideas {% if status %}<span class="pill">{{ status }}</span>{% endif %}</h1>
+<div class="row">
+  <a class="pill" href="{{ url_for('idea_list') }}">all</a>
+  {% for s in workflow.ALL_STATUSES %}<a class="pill" href="{{ url_for('idea_list', status=s) }}">{{ s }}</a>{% endfor %}
+</div>
+<p class="muted">Ranked by weighted score (weights in <code>config/scoring.yaml</code>).</p>
+<div class="wrap"><table>
+  <tr><th class="num">Score</th><th>Idea</th><th>Category</th><th>Status</th>
+      {% for key, c in criteria.items() %}<th class="num" title="{{ c.question }}">{{ c.label.split()[0][:6] }}</th>{% endfor %}</tr>
+  {% for idea, s in rows %}
+  <tr>
+    <td class="num"><strong>{{ s.total if s.total is not none else '-' }}</strong>{% if s.total is not none and not s.complete %}*{% endif %}</td>
+    <td><a href="{{ url_for('idea_detail', idea_id=idea.id) }}">{{ idea.title }}</a></td>
+    <td>{{ idea.category.name if idea.category else '' }}</td>
+    <td><span class="pill">{{ idea.status }}</span></td>
+    {% for key in criteria %}<td class="num">{{ s.breakdown[key].value or '' }}</td>{% endfor %}
+  </tr>
+  {% else %}<tr><td colspan="12" class="muted">No ideas.</td></tr>{% endfor %}
+</table></div>
+<p class="muted">* partial score (not every criterion rated)</p>
+{% endblock %}

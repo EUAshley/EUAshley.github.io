@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_perf_table.html" import perf_table %}
+{% block content %}
+<h1>What's working</h1>
+<p class="muted">{{ report.n_measured }} measured publications (latest snapshot of each). Rates are per view.
+Recommendations need at least {{ report.min_n }} videos per group; with less data, treat everything as anecdote.</p>
+
+<h2>Recommendations <span class="muted">(heuristic)</span></h2>
+<table>
+  {% for r in report.recommendations %}<tr><td>{{ r.category }}</td><td><strong>{{ r.verdict }}</strong></td><td class="muted">{{ r.why }}</td></tr>
+  {% else %}<tr><td class="muted">No data yet.</td></tr>{% endfor %}
+</table>
+
+<h2>By category</h2>{{ perf_table(report.by_category, "Category") }}
+<h2>By hook type</h2>{{ perf_table(report.by_hook_type, "Hook type") }}
+<h2>By platform</h2>{{ perf_table(report.by_platform, "Platform") }}
+
+<h2>Top videos by save rate</h2>
+<div class="wrap"><table>
+  <tr><th>Idea</th><th>Platform</th><th class="num">Views</th><th class="num">Saves</th><th class="num">Save rate</th><th class="num">Score</th></tr>
+  {% for r in report.top_by_save_rate %}
+  <tr><td><a href="{{ url_for('idea_detail', idea_id=r.idea_id) }}">{{ r.title }}</a></td><td>{{ r.platform }}</td>
+      <td class="num">{{ "{:,}".format(r.views) }}</td><td class="num">{{ r.saves }}</td>
+      <td class="num">{{ (r.saves / r.views if r.views else none)|pct }}</td><td class="num">{{ r.score }}</td></tr>
+  {% endfor %}
+</table></div>
+
+<h2>Offers</h2>
+<table>
+  <tr><th>Offer</th><th class="num">Clicks</th><th class="num">Conversions</th><th class="num">Revenue</th></tr>
+  {% for row in report.offers %}<tr><td>{{ row.offer.name }}</td><td class="num">{{ row.clicks }}</td><td class="num">{{ row.conversions }}</td><td class="num">{{ row.revenue_cents|money }}</td></tr>{% endfor %}
+</table>
+
+<h2>Is the scoring model predictive?</h2>
+<p>Rank correlation between idea score and views:
+  <strong>{{ "%.2f"|format(report.score_vs_views) if report.score_vs_views is not none else "needs 5+ measured videos" }}</strong>.
+  <span class="muted">Near 0 means the weights aren't predicting reach yet; adjust them in config/scoring.yaml.</span></p>
+
+<h2>Pipeline</h2>
+<div class="row">{% for s, n in report.pipeline %}<span class="pill">{{ s }}: {{ n }}</span>{% endfor %}</div>
+{% endblock %}

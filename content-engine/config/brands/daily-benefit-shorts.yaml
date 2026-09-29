@@ -1,0 +1,71 @@
+slug: daily-benefit-shorts
+name: Daily Benefit Shorts
+description: >
+  Very short, genuinely useful videos showing something you can do with
+  technology that gives an immediate everyday benefit.
+
+voice: >
+  Calm, direct, helpful. Show the result first, then exactly how to do it.
+  No hype, no clickbait, no filler. Every sentence earns its place.
+  Speak to one person. Use plain words ("tap", "open", "turn on").
+
+default_cta: Follow for one useful tech trick every day.
+
+platforms:
+  - tiktok
+  - instagram_reels
+  - youtube_shorts
+
+categories:
+  - iPhone Shortcuts
+  - iPhone Features
+  - Automations
+  - AI Tools
+  - Productivity Workflows
+  - Useful Apps
+  - Everyday Tech Tricks
+
+# Used to tag scripts so we can learn which hook styles perform best.
+hook_types:
+  - result_first        # show the finished outcome immediately
+  - problem_question    # "Tired of X?"
+  - did_you_know        # "Your iPhone can..."
+  - stop_doing          # "Stop doing X manually"
+  - pov                 # "POV: you never type your ETA again"
+
+# Default script structure. Timings are targets, not rules: the generator
+# shortens the demo when there are few steps.
+script_format:
+  - {key: hook, label: HOOK, seconds: 3}
+  - {key: problem, label: PROBLEM, seconds: 4}
+  - {key: demo, label: DEMONSTRATION, seconds: 18}
+  - {key: result, label: RESULT, seconds: 6}
+  - {key: cta, label: CTA, seconds: 3}
+
+caption_template: |
+  {hook}
+
+  {benefit}
+
+  How:
+  {steps}
+
+  {cta}
+
+hashtags:
+  base: ["techtips", "lifehacks", "productivity"]
+  by_category:
+    iPhone Shortcuts: ["iphoneshortcuts", "shortcuts", "iphonetips", "ios"]
+    iPhone Features: ["iphonetips", "iphonetricks", "ios"]
+    Automations: ["automation", "workflow"]
+    AI Tools: ["ai", "aitools", "chatgpt"]
+    Productivity Workflows: ["productivityhacks", "workflow"]
+    Useful Apps: ["apps", "appsyouneed"]
+    Everyday Tech Tricks: ["techhacks", "tech"]
+
+# Checklist added to every screen-recording plan.
+recording_prep:
+  - Turn on Do Not Disturb / Focus so no notifications appear.
+  - Clean home screen; hide personal info (contacts, addresses, messages).
+  - Set display to light mode unless the demo looks better dark.
+  - Start Screen Recording from Control Center; record each step as its own clip.

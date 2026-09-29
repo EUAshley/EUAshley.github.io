@@ -1,0 +1,46 @@
+# Idea scoring model.
+#
+# Each criterion is rated 1-5 by a human (or, later, by AI).
+# Weights are relative: they are normalized by their sum, so use whatever
+# numbers are convenient. Change them any time; rankings are recomputed live.
+#
+# total = 100 * sum(weight * (value - 1) / 4) / sum(weight)   -> 0..100
+
+scale:
+  min: 1
+  max: 5
+
+criteria:
+  usefulness:
+    weight: 25
+    label: Usefulness
+    question: Would someone actually benefit from knowing this?
+  hook_strength:
+    weight: 15
+    label: Hook strength
+    question: Can the benefit be communicated in the first 2 seconds?
+  demonstrability:
+    weight: 15
+    label: Demonstrability
+    question: Can the benefit be shown visually in a short video?
+  novelty:
+    weight: 10
+    label: Novelty
+    question: Would many viewers not already know this?
+  production_ease:
+    weight: 10
+    label: Production ease
+    question: Can we make this quickly (under ~1 hour)?
+  monetization:
+    weight: 15
+    label: Monetization potential
+    question: Does it connect naturally to an affiliate offer, product, or future business?
+  repeatability:
+    weight: 10
+    label: Repeatability
+    question: Is this part of a category that can produce many more videos?
+
+# Phase 3 hook: points added to an idea's score based on its category's
+# observed performance. Edited by hand for now; later computed automatically.
+# Example:  "iPhone Shortcuts": 5
+category_adjustments: {}

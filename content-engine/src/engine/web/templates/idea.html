@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}#{{ idea.id }} {{ idea.title }}{% endblock %}
+{% block content %}
+<h1>#{{ idea.id }} {{ idea.title }}</h1>
+<div class="row">
+  <span class="pill">status: <strong>{{ idea.status }}</strong></span>
+  <span class="pill">score: <strong>{{ score.total if score.total is not none else '-' }}</strong>{% if score.total is not none and not score.complete %} (partial){% endif %}</span>
+  <span class="pill">{{ idea.category.name if idea.category else 'no category' }}</span>
+  <a href="{{ url_for('idea_edit', idea_id=idea.id) }}">Edit idea</a>
+  {% for t in manual_transitions %}
+    <form class="inline" method="post" action="{{ url_for('idea_transition', idea_id=idea.id) }}">
+      <input type="hidden" name="to" value="{{ t }}">
+      <button {% if t == 'selected' %}class="primary"{% endif %}>{{ {'selected':'Select for production','parked':'Park','rejected':'Reject','idea':'Reopen','scored':'Back to queue'}[t] }}</button>
+    </form>
+  {% endfor %}
+</div>
+
+<h2>Idea</h2>
+<div class="grid">
+  {% for name, label in [("hook","Hook"),("problem_solved","Problem solved"),("benefit","Benefit"),("target_audience","Audience"),("tools","Tools"),("source","Source")] %}
+  <div class="field"><label>{{ label }}</label>{{ idea[name] or '—' }}</div>
+  {% endfor %}
+</div>
+<div class="grid">
+  <div class="field"><label>Solution steps</label>
+    {% if idea.steps %}<ol>{% for s in idea.steps %}<li>{{ s }}</li>{% endfor %}</ol>{% else %}—{% endif %}</div>
+  <div class="field"><label>Research notes</label>{{ idea.research_notes or '—' }}
+    <label style="margin-top:6px">Notes</label>{{ idea.notes or '—' }}</div>
+</div>
+
+<h2 id="scores">Score</h2>
+<form method="post" action="{{ url_for('idea_scores', idea_id=idea.id) }}">
+  <div class="wrap"><table>
+    <tr><th>Criterion</th><th class="num">Weight</th><th>1–5</th><th>Why (optional)</th></tr>
+    {% set existing = {} %}{% for s in idea.scores %}{% set _ = existing.update({s.criterion: s}) %}{% endfor %}
+    {% for key, c in criteria.items() %}
+    <tr>
+      <td><strong>{{ c.label }}</strong><br><span class="muted">{{ c.question }}</span></td>
+      <td class="num">{{ c.weight }}</td>
+      <td><select name="score_{{ key }}">
+        <option value="">–</option>
+        {% for v in range(1, 6) %}<option {% if existing[key] and existing[key].value == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select></td>
+      <td><input name="why_{{ key }}" style="width:100%" value="{{ existing[key].rationale if existing[key] else '' }}"></td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  <button class="primary">Save scores</button>
+  {% if score.adjustment %}<span class="muted">includes category adjustment {{ score.adjustment }}</span>{% endif %}
+</form>
+
+{% set script = idea.current_script %}
+<h2 id="script">Script {% if script %}<span class="muted">v{{ script.version }} · {{ script.generator }} · ~{{ script.target_seconds }}s</span>{% endif %}</h2>
+{% if idea.status in workflow.EDITABLE %}
+<div class="row">
+  {% for gname in generators %}
+  <form class="inline" method="post" action="{{ url_for('script_generate', idea_id=idea.id) }}">
+    <input type="hidden" name="generator" value="{{ gname }}">
+    <button {% if not script %}class="primary"{% endif %}>{{ 'Regenerate' if script else 'Generate' }} script ({{ gname }})</button>
+  </form>
+  {% endfor %}
+  {% if 'claude' not in generators %}<span class="muted">Set ANTHROPIC_API_KEY to enable the Claude generator.</span>{% endif %}
+</div>
+{% elif not script %}<p class="muted">Select this idea for production to write a script.</p>{% endif %}
+
+{% if script %}
+<form method="post" action="{{ url_for('script_edit', idea_id=idea.id) }}">
+  <div class="wrap"><table>
+    <tr><th>Section</th><th>Secs</th><th>Voiceover</th><th>On-screen text</th><th>Visual</th></tr>
+    {% for s in script.sections %}
+    <tr>
+      <td><strong>{{ s.label }}</strong><br><span class="muted">{{ s.start }}–{{ s.end }}s</span></td>
+      <td><input name="seconds_{{ loop.index0 }}" value="{{ s.seconds }}" size="2"></td>
+      <td><textarea name="voiceover_{{ loop.index0 }}">{{ s.voiceover }}</textarea></td>
+      <td><textarea name="on_screen_text_{{ loop.index0 }}">{{ s.on_screen_text }}</textarea></td>
+      <td><textarea name="visual_{{ loop.index0 }}">{{ s.visual }}</textarea></td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  <div class="row">
+    <label>CTA <input name="cta" size="50" value="{{ script.cta }}"></label>
+    <label>Hook type <select name="hook_type">
+      {% for h in brand.hook_types or [] %}<option {% if h == script.hook_type %}selected{% endif %}>{{ h }}</option>{% endfor %}
+      {% if script.hook_type not in (brand.hook_types or []) %}<option selected>{{ script.hook_type }}</option>{% endif %}
+    </select></label>
+    {% if idea.status in workflow.EDITABLE %}<button>Save edits as new version</button>{% endif %}
+  </div>
+</form>
+{% endif %}
+
+<h2 id="package">Production package</h2>
+{% if script and idea.status in ['scripted', 'packaged', 'changes_requested'] %}
+<form class="inline" method="post" action="{{ url_for('package_generate', idea_id=idea.id) }}">
+  <button {% if not package or package.script_id != script.id %}class="primary"{% endif %}>{{ 'Rebuild' if package else 'Build' }} production package</button>
+</form>
+{% endif %}
+{% if package %}
+  <a href="{{ url_for('package_md', idea_id=idea.id) }}">Download as Markdown</a>
+  <span class="muted"> · est. {{ package.est_minutes }} min to produce</span>
+  <div class="grid" style="margin-top:8px">
+    <div class="card"><strong>Title</strong><br>{{ package.title }}<br><br><strong>Opening hook</strong><br>{{ package.opening_hook }}
+      <br><br><strong>Cover text</strong><br>{{ package.cover_text }}<br><br><strong>CTA</strong><br>{{ package.cta }}</div>
+    <div class="card"><strong>Caption</strong><pre>{{ package.caption }}</pre>
+      <strong>Keywords</strong><br>{{ package.keywords|join(', ') }}</div>
+  </div>
+  <strong>Shot list</strong>
+  <div class="wrap"><table>
+    <tr><th>#</th><th>Time</th><th>Section</th><th>Visual</th><th>On screen</th></tr>
+    {% for s in package.shot_list %}<tr><td>{{ s.shot }}</td><td>{{ s.time }}</td><td>{{ s.section }}</td><td>{{ s.visual }}</td><td>{{ s.on_screen_text }}</td></tr>{% endfor %}
+  </table></div>
+  <div class="grid">
+    <div><strong>Screen-recording instructions</strong><ul>{% for x in package.recording_steps %}<li>{{ x }}</li>{% endfor %}</ul></div>
+    <div><strong>Required assets</strong><ul>{% for x in package.required_assets %}<li>{{ x }}</li>{% endfor %}</ul>
+         <strong>Monetization</strong><ul>{% for x in package.monetization_notes %}<li>{{ x }}</li>{% endfor %}</ul></div>
+  </div>
+  <details><summary>Full voiceover</summary><pre>{{ package.voiceover }}</pre></details>
+{% else %}<p class="muted">No package yet.</p>{% endif %}
+
+<h2 id="review">Approval</h2>
+{% if idea.status == 'packaged' %}
+  <form method="post" action="{{ url_for('submit', idea_id=idea.id) }}"><button class="primary">Submit for review</button></form>
+{% elif idea.status == 'in_review' %}
+  <form method="post" action="{{ url_for('review', idea_id=idea.id) }}" class="card">
+    <p>Review the package above. Only an approved package can enter the publish queue.</p>
+    <textarea name="notes" placeholder="Notes (required context for changes)"></textarea>
+    <div class="row">
+      <button name="decision" value="approved" class="primary">Approve</button>
+      <button name="decision" value="changes_requested">Request changes</button>
+      <button name="decision" value="rejected">Reject</button>
+    </div>
+  </form>
+{% endif %}
+{% if package and package.approvals %}
+  <table>{% for a in package.approvals %}<tr><td>{{ a.decided_at.strftime('%Y-%m-%d %H:%M') }}</td><td><strong>{{ a.decision }}</strong></td><td>{{ a.notes }}</td></tr>{% endfor %}</table>
+{% elif idea.status not in ['packaged', 'in_review'] %}<p class="muted">Not reviewed yet.</p>{% endif %}
+
+<h2 id="publications">Publishing & performance</h2>
+{% if approved and idea.status in ['approved', 'queued', 'published', 'measured'] %}
+<form method="post" action="{{ url_for('queue_add', idea_id=idea.id) }}" class="row">
+  <select name="platform">{% for p in brand.platforms or [] %}<option>{{ p }}</option>{% endfor %}</select>
+  <label>Scheduled <input type="date" name="scheduled_for"></label>
+  <input name="tracking_link" placeholder="Tracking link (optional)" size="30">
+  <button class="primary">Add to publish queue</button>
+</form>
+{% endif %}
+{% set pubs = package.publications if package else [] %}
+{% for pub in pubs %}
+<div class="card" style="margin:8px 0">
+  <strong>{{ pub.platform }}</strong> <span class="pill">{{ pub.status }}</span>
+  {% if pub.scheduled_for %}<span class="muted">scheduled {{ pub.scheduled_for }}</span>{% endif %}
+  {% if pub.url %}<a href="{{ pub.url }}" target="_blank" rel="noopener">{{ pub.url }}</a> <span class="muted">published {{ pub.published_at }}</span>{% endif %}
+  {% if pub.status == 'queued' %}
+    <form method="post" action="{{ url_for('pub_published', pub_id=pub.id) }}" class="row">
+      <input name="url" placeholder="Post URL (after you publish it)" required size="40">
+      <input type="date" name="published_at">
+      <button class="primary">Mark published</button>
+    </form>
+    <form method="post" action="{{ url_for('pub_cancel', pub_id=pub.id) }}" class="inline"><button>Remove from queue</button></form>
+  {% elif pub.status == 'published' %}
+    <form method="post" action="{{ url_for('pub_metrics', pub_id=pub.id) }}" class="row">
+      {% for f in ['views','likes','comments','shares','saves','follows','link_clicks','avg_watch_seconds','retention_pct'] %}
+        <input name="{{ f }}" placeholder="{{ f }}" size="7">
+      {% endfor %}
+      <button>Add snapshot</button>
+    </form>
+    {% if pub.snapshots %}
+    <div class="wrap"><table>
+      <tr><th>Captured</th><th class="num">Views</th><th class="num">Likes</th><th class="num">Comments</th><th class="num">Shares</th>
+          <th class="num">Saves</th><th class="num">Follows</th><th class="num">Clicks</th><th class="num">Avg watch</th><th class="num">Retention</th><th>Src</th></tr>
+      {% for s in pub.snapshots %}
+      <tr><td>{{ s.captured_at.strftime('%Y-%m-%d') }}</td><td class="num">{{ s.views }}</td><td class="num">{{ s.likes }}</td>
+          <td class="num">{{ s.comments }}</td><td class="num">{{ s.shares }}</td><td class="num">{{ s.saves }}</td>
+          <td class="num">{{ s.follows }}</td><td class="num">{{ s.link_clicks }}</td>
+          <td class="num">{{ s.avg_watch_seconds or '-' }}</td><td class="num">{{ s.retention_pct or '-' }}</td><td>{{ s.source }}</td></tr>
+      {% endfor %}
+    </table></div>
+    {% endif %}
+  {% endif %}
+</div>
+{% else %}<p class="muted">Not queued anywhere yet.</p>{% endfor %}
+
+<h2 id="offers">Monetization</h2>
+<ul>{% for o in linked_offers %}<li><span class="pill">{{ o.type }}</span> {{ o.name }} {% if o.url %}<a href="{{ o.url }}">{{ o.url }}</a>{% endif %}</li>{% else %}<li class="muted">No offers linked (directly or via category).</li>{% endfor %}</ul>
+{% if all_offers %}
+<form method="post" action="{{ url_for('offer_link', idea_id=idea.id) }}" class="row">
+  <select name="offer_id">{% for o in all_offers %}<option value="{{ o.id }}">{{ o.type }}: {{ o.name }}</option>{% endfor %}</select>
+  <select name="role"><option>primary</option><option>secondary</option></select>
+  <button>Link offer</button>
+</form>
+{% endif %}
+
+<h2 id="learnings">Learnings</h2>
+<ul>{% for l in idea.learnings %}<li>{{ l.text }} {% if l.tags %}<span class="muted">[{{ l.tags }}]</span>{% endif %}</li>{% else %}<li class="muted">None yet.</li>{% endfor %}</ul>
+<form method="post" action="{{ url_for('learning_add', idea_id=idea.id) }}" class="row">
+  <input name="text" placeholder="What did we learn?" required size="60"><input name="tags" placeholder="tags" size="15"><button>Add</button>
+</form>
+
+<h2>History</h2>
+<table>{% for h in idea.history %}<tr><td class="muted">{{ h.at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ h.from_status or '' }} → <strong>{{ h.to_status }}</strong></td><td>{{ h.note }}</td></tr>{% endfor %}</table>
+{% endblock %}

@@ -1,14 +1,16 @@
 """Local web UI. Server-rendered forms; no JS build. All logic lives in services."""
 from __future__ import annotations
 
+import tempfile
 from datetime import date
 from functools import wraps
+from pathlib import Path
 
 from flask import Flask, Response, flash, g, redirect, render_template, request, url_for
 
-from .. import config, db, generators, reports, scoring, workflow
+from .. import ai, config, db, generators, reports, scoring, workflow
 from ..models import OFFER_TYPES, Category, Idea, Offer
-from ..services import ideas, offers, performance, production, publishing
+from ..services import ai_assist, ideas, offers, performance, production, publishing, tracking
 
 MANUAL_TRANSITIONS = [workflow.SELECTED, workflow.SCORED, workflow.PARKED, workflow.REJECTED, workflow.IDEA]
 
@@ -42,7 +44,7 @@ def create_app() -> Flask:
     @app.context_processor
     def _globals():
         return {"brand": config.brand_config(config.default_brand_slug()), "criteria": scoring.criteria(),
-                "score_of": scoring.score_idea, "workflow": workflow}
+                "score_of": scoring.score_idea, "workflow": workflow, "ai_enabled": ai.available()}
 
     def action(fn):
         """POST handler wrapper: commit on success, flash errors and go back."""
@@ -52,7 +54,7 @@ def create_app() -> Flask:
                 result = fn(*args, **kwargs)
                 g.db.commit()
                 return result
-            except (workflow.WorkflowError, ValueError, LookupError, RuntimeError) as e:
+            except (workflow.WorkflowError, ValueError, LookupError, RuntimeError, KeyError) as e:
                 g.db.rollback()
                 flash(str(e), "error")
                 return redirect(request.referrer or url_for("index"))
@@ -73,13 +75,23 @@ def create_app() -> Flask:
         return render_template("index.html", report=reports.build_report(g.db),
                                queue=publishing.publish_queue(g.db),
                                in_review=ideas.list_ideas(g.db, [workflow.IN_REVIEW]),
+                               due=performance.metrics_due(g.db),
                                top=ideas.ranked_queue(g.db)[:5])
 
     @app.get("/ideas")
     def idea_list():
         status = request.args.get("status")
         rows = scoring.rank(ideas.list_ideas(g.db, [status] if status else None))
-        return render_template("ideas.html", rows=rows, status=status)
+        return render_template("ideas.html", rows=rows, status=status, categories=_categories())
+
+    @app.post("/ideas/ai-suggest")
+    @action
+    def ideas_ai_suggest():
+        created = ai_assist.suggest_ideas(g.db, category=request.form.get("category") or None,
+                                          count=form_int("count") or 5,
+                                          web_search=request.form.get("web_search") == "on")
+        flash(f"Claude suggested {len(created)} idea(s). Review the steps and save scores yourself to accept them.")
+        return redirect(url_for("idea_list", status="idea"))
 
     @app.get("/ideas/new")
     def idea_new():
@@ -125,6 +137,13 @@ def create_app() -> Flask:
         res = ideas.set_scores(g.db, idea, values, rationales=rationales)
         flash(f"Score: {res.total}" + ("" if res.complete else " (partial)"))
         return redirect(url_for("idea_detail", idea_id=idea_id))
+
+    @app.post("/ideas/<int:idea_id>/ai-score")
+    @action
+    def idea_ai_score(idea_id):
+        res = ai_assist.suggest_scores(g.db, ideas.get_idea(g.db, idea_id))
+        flash(f"AI suggested scores (total {res.total}). Adjust and save to confirm.")
+        return redirect(url_for("idea_detail", idea_id=idea_id) + "#scores")
 
     @app.post("/ideas/<int:idea_id>/transition")
     @action
@@ -232,7 +251,10 @@ def create_app() -> Flask:
     def offer_link(idea_id):
         idea = ideas.get_idea(g.db, idea_id)
         offer = g.db.get(Offer, int(request.form["offer_id"]))
+        if offer is None:
+            raise LookupError("Offer not found")
         offers.link_offer(g.db, offer, idea=idea, role=request.form.get("role", "primary"))
+        tracking.refresh_for_idea(g.db, idea)
         return redirect(url_for("idea_detail", idea_id=idea_id) + "#offers")
 
     @app.get("/queue")
@@ -249,7 +271,8 @@ def create_app() -> Flask:
     def offer_create():
         offer = offers.create_offer(g.db, type=request.form["type"], name=request.form["name"],
                                     url=request.form.get("url", ""), program=request.form.get("program", ""),
-                                    terms=request.form.get("terms", ""))
+                                    terms=request.form.get("terms", ""),
+                                    link_template=request.form.get("link_template", "").strip())
         if request.form.get("category_id"):
             offers.link_offer(g.db, offer, category_id=int(request.form["category_id"]))
         return redirect(url_for("offer_page"))
@@ -258,11 +281,43 @@ def create_app() -> Flask:
     @action
     def revenue_add(offer_id):
         offer = g.db.get(Offer, offer_id)
+        if offer is None:
+            raise LookupError("Offer not found")
         dollars = request.form.get("revenue", "").strip() or "0"
         offers.record_revenue(g.db, offer, on=form_date("date") or date.today(), clicks=form_int("clicks") or 0,
                               conversions=form_int("conversions") or 0,
                               revenue_cents=round(float(dollars) * 100),
                               publication_id=form_int("publication_id"), notes=request.form.get("notes", ""))
+        return redirect(url_for("offer_page"))
+
+    def _uploads(field):
+        """Save uploaded files to a temp dir and yield (name, path)."""
+        tmp = Path(tempfile.mkdtemp())
+        for f in request.files.getlist(field):
+            if f and f.filename:
+                path = tmp / Path(f.filename).name
+                f.save(path)
+                yield f.filename, path
+
+    @app.post("/import/metrics")
+    @action
+    def import_metrics():
+        for name, path in _uploads("files"):
+            r = performance.import_csv(g.db, path)
+            flash(f"{name}: imported {r.imported} snapshot(s), {r.unmatched} row(s) matched no published video.")
+            for e in r.errors[:10]:
+                flash(e, "warning")
+        return redirect(url_for("index"))
+
+    @app.post("/import/revenue")
+    @action
+    def import_revenue():
+        offer = g.db.get(Offer, int(request.form["offer_id"])) if request.form.get("offer_id") else None
+        for name, path in _uploads("file"):
+            n, errors = tracking.import_revenue_csv(g.db, path, default_offer=offer)
+            flash(f"{name}: imported {n} revenue row(s).")
+            for e in errors[:10]:
+                flash(e, "warning")
         return redirect(url_for("offer_page"))
 
     @app.get("/report")

@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Iterator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -38,7 +38,25 @@ def engine() -> Engine:
 
 
 def create_all() -> None:
+    """Create missing tables, then add any missing columns (additive migrations)."""
     Base.metadata.create_all(engine())
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """Lightweight migration: new nullable columns added to models appear in
+    existing databases automatically. Renames/drops still need a real tool
+    (Alembic) — add it before making that kind of change."""
+    eng = engine()
+    insp = inspect(eng)
+    with eng.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            existing = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in existing:
+                    continue
+                ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col.type.compile(eng.dialect)}'
+                conn.execute(text(ddl))
 
 
 def new_session() -> Session:

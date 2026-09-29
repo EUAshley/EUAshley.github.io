@@ -195,7 +195,10 @@ class Publication(Timestamped, Base):
     scheduled_for: Mapped[Optional[date]] = mapped_column(Date)
     published_at: Mapped[Optional[date]] = mapped_column(Date)
     url: Mapped[str] = mapped_column(Text, default="")
-    tracking_link: Mapped[str] = mapped_column(Text, default="")  # per-video link for attribution
+    tracking_link: Mapped[str] = mapped_column(Text, default="")  # manual link (e.g. link-in-bio page)
+    # Short unique code per post, embedded in every offer link so revenue can be attributed.
+    tracking_code: Mapped[Optional[str]] = mapped_column(String(40), unique=True)
+    tracking_links: Mapped[Optional[list]] = mapped_column(JSON)  # [{offer_id, offer, url}]
     package: Mapped[ProductionPackage] = relationship(back_populates="publications")
     snapshots: Mapped[list["PerformanceSnapshot"]] = relationship(
         back_populates="publication", cascade="all, delete-orphan", order_by="PerformanceSnapshot.captured_at"
@@ -245,6 +248,9 @@ class Offer(Timestamped, Base):
     url: Mapped[str] = mapped_column(Text, default="")
     program: Mapped[str] = mapped_column(String(200), default="")  # e.g. "Amazon Associates"
     terms: Mapped[str] = mapped_column(Text, default="")  # commission, cookie window...
+    # Optional per-video link pattern, e.g. "https://amzn.to/x?tag=me-20&ascsubtag={code}".
+    # Placeholders: {code} {platform} {idea_id}. Blank = offer url + UTM parameters.
+    link_template: Mapped[Optional[str]] = mapped_column(Text, default="")
     active: Mapped[bool] = mapped_column(default=True)
     links: Mapped[list["OfferLink"]] = relationship(back_populates="offer", cascade="all, delete-orphan")
     revenue_events: Mapped[list["RevenueEvent"]] = relationship(back_populates="offer")
@@ -273,6 +279,7 @@ class RevenueEvent(Timestamped, Base):
     conversions: Mapped[int] = mapped_column(Integer, default=0)
     revenue_cents: Mapped[int] = mapped_column(Integer, default=0)
     source: Mapped[str] = mapped_column(String(40), default="manual")
+    tracking_code: Mapped[Optional[str]] = mapped_column(String(40))
     notes: Mapped[str] = mapped_column(Text, default="")
     offer: Mapped[Offer] = relationship(back_populates="revenue_events")
     publication: Mapped[Optional[Publication]] = relationship()

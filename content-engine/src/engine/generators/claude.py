@@ -6,9 +6,7 @@ template generator, so everything downstream is identical.
 """
 from __future__ import annotations
 
-import json
-
-from .. import config
+from .. import ai
 from ..models import Idea
 from .base import ScriptDraft, retime
 
@@ -54,13 +52,7 @@ class ClaudeGenerator:
     name = "claude"
 
     def available(self) -> bool:
-        if not config.env("ANTHROPIC_API_KEY"):
-            return False
-        try:
-            import anthropic  # noqa: F401
-        except ImportError:
-            return False
-        return True
+        return ai.available()
 
     def _prompt(self, idea: Idea, brand: dict) -> str:
         fmt = "\n".join(f"- {s['key']} ({s['label']}): ~{s['seconds']}s" for s in brand.get("script_format", []))
@@ -88,29 +80,7 @@ Idea
 Write the script."""
 
     def generate(self, idea: Idea, brand: dict) -> ScriptDraft:
-        import anthropic
-
-        client = anthropic.Anthropic()
-        response = client.beta.messages.create(
-            model=config.env("ENGINE_CLAUDE_MODEL", "claude-opus-5-5"),
-            max_tokens=16000,
-            system=SYSTEM,
-            messages=[{"role": "user", "content": self._prompt(idea, brand)}],
-            output_config={
-                "effort": config.env("ENGINE_CLAUDE_EFFORT", "medium"),
-                "format": {"type": "json_schema", "schema": SCHEMA},
-            },
-            # Server-side refusal fallback: reroutes a declined request automatically.
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-        )
-        if response.stop_reason == "refusal":
-            raise RuntimeError("Claude declined to write this script; use the template generator.")
-        if response.stop_reason == "max_tokens":
-            raise RuntimeError("Claude's response was truncated; try again.")
-        text = next(b.text for b in response.content if b.type == "text")
-        data = json.loads(text)
-
+        data, model = ai.structured(SYSTEM, self._prompt(idea, brand), SCHEMA)
         labels = {s["key"]: s["label"] for s in brand.get("script_format", [])}
         order = {k: i for i, k in enumerate(SECTION_KEYS)}
         sections = sorted(data["sections"], key=lambda s: order.get(s["key"], 99))
@@ -120,6 +90,6 @@ Write the script."""
             sections=retime(sections),
             cta=data["cta"],
             hook_type=data["hook_type"],
-            generator=f"{self.name}:{response.model}",
+            generator=f"{self.name}:{model}",
             notes=data.get("notes", []),
         )

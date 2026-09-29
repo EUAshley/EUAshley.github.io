@@ -36,6 +36,21 @@
   </div>
 </div>
 
+<h2>Metrics due <span class="muted">({{ due|length }})</span></h2>
+<table>
+  {% for d in due %}{% set p = d.publication %}
+  <tr><td>day {{ d.checkpoint }} snapshot</td><td>{{ p.platform }}</td>
+      <td><a href="{{ url_for('idea_detail', idea_id=p.idea.id) }}#publications">{{ p.idea.title }}</a></td>
+      <td><a href="{{ p.url }}" target="_blank" rel="noopener">open post</a></td></tr>
+  {% else %}<tr><td class="muted">No snapshots due.</td></tr>{% endfor %}
+</table>
+<form method="post" action="{{ url_for('import_metrics') }}" enctype="multipart/form-data" class="row">
+  <strong>Import analytics export(s)</strong>
+  <input type="file" name="files" accept=".csv" multiple required>
+  <button>Import</button>
+  <span class="muted">TikTok / Instagram / YouTube Studio CSVs; rows are matched to your posts by URL or video ID.</span>
+</form>
+
 <h2>What's working <span class="muted">({{ report.n_measured }} measured videos)</span></h2>
 {% from "_perf_table.html" import perf_table %}
 {{ perf_table(report.by_category) }}

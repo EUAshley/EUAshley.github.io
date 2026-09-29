@@ -1,0 +1,32 @@
+# How `engine import-metrics` reads analytics exports from TikTok, Instagram,
+# YouTube Studio, or a spreadsheet you keep yourself.
+#
+# Headers are matched case-insensitively. If a platform renames a column,
+# add the new name to the right list; no code changes needed.
+
+columns:
+  publication_id: [publication_id, publication, pub_id]
+  url: [url, link, video link, post link, permalink]
+  video_id: [video id, video_id, content, post id, media id, id]
+  captured_at: [captured_at, as of, export date, snapshot date]   # omit to use "now"
+  views: [views, video views, plays, impressions, reach]
+  likes: [likes, like count, reactions]
+  comments: [comments, comment count]
+  shares: [shares, share count, reposts]
+  saves: [saves, favorites, favourites, bookmarks, add to favorites]
+  follows: [follows, followers gained, new followers, subscribers, subscribers gained, follows gained]
+  link_clicks: [link_clicks, link clicks, profile link clicks, clicks]
+  avg_watch_seconds: [avg_watch_seconds, average view duration, average watch time, avg. watch time, average time watched]
+  retention_pct: [retention_pct, average percentage viewed (%), average percentage viewed, watched full video (%), completion rate]
+
+# How to pull a video's ID out of the URL you recorded when you published, so
+# exports that only contain IDs can still be matched.
+video_id_patterns:
+  - "youtube\\.com/shorts/([A-Za-z0-9_-]{6,})"
+  - "[?&]v=([A-Za-z0-9_-]{6,})"
+  - "youtu\\.be/([A-Za-z0-9_-]{6,})"
+  - "tiktok\\.com/.*/video/(\\d+)"
+  - "instagram\\.com/(?:reel|reels|p)/([A-Za-z0-9_-]+)"
+
+# When to take metric snapshots (days after publishing). Drives "metrics due".
+snapshot_days: [1, 7, 30]

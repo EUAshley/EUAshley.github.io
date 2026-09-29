@@ -88,7 +88,8 @@ def set_scores(session: Session, idea: Idea, values: dict[str, int], scored_by: 
                                          rationale=rationales.get(key, "")))
     session.flush()
     result = scoring.score_idea(idea)
-    if result.complete and idea.status == workflow.IDEA:
+    # AI suggestions rank the idea but only a human's scores move it to `scored`.
+    if result.complete and idea.status == workflow.IDEA and scored_by == "human":
         workflow.transition(session, idea, workflow.SCORED, note=f"score {result.total}")
     return result
 

@@ -5,6 +5,16 @@
   <a class="pill" href="{{ url_for('idea_list') }}">all</a>
   {% for s in workflow.ALL_STATUSES %}<a class="pill" href="{{ url_for('idea_list', status=s) }}">{{ s }}</a>{% endfor %}
 </div>
+{% if ai_enabled %}
+<form method="post" action="{{ url_for('ideas_ai_suggest') }}" class="row card">
+  <strong>Research new ideas with Claude</strong>
+  <select name="category"><option value="">any category</option>{% for c in categories %}<option>{{ c.name }}</option>{% endfor %}</select>
+  <label>count <input name="count" value="5" size="2"></label>
+  <label><input type="checkbox" name="web_search" checked> check steps with web search</label>
+  <button class="primary">Suggest ideas</button>
+  <span class="muted">Uses what's performed and your learnings. Takes up to a minute.</span>
+</form>
+{% endif %}
 <p class="muted">Ranked by weighted score (weights in <code>config/scoring.yaml</code>).</p>
 <div class="wrap"><table>
   <tr><th class="num">Score</th><th>Idea</th><th>Category</th><th>Status</th>
@@ -12,12 +22,13 @@
   {% for idea, s in rows %}
   <tr>
     <td class="num"><strong>{{ s.total if s.total is not none else '-' }}</strong>{% if s.total is not none and not s.complete %}*{% endif %}</td>
-    <td><a href="{{ url_for('idea_detail', idea_id=idea.id) }}">{{ idea.title }}</a></td>
+    <td><a href="{{ url_for('idea_detail', idea_id=idea.id) }}">{{ idea.title }}</a>
+        {% if idea.source.startswith('ai:') %}<span class="pill">AI</span>{% endif %}</td>
     <td>{{ idea.category.name if idea.category else '' }}</td>
     <td><span class="pill">{{ idea.status }}</span></td>
     {% for key in criteria %}<td class="num">{{ s.breakdown[key].value or '' }}</td>{% endfor %}
   </tr>
   {% else %}<tr><td colspan="12" class="muted">No ideas.</td></tr>{% endfor %}
 </table></div>
-<p class="muted">* partial score (not every criterion rated)</p>
+<p class="muted">* partial score (not every criterion rated). AI = suggested by Claude; its scores are suggestions until you save them.</p>
 {% endblock %}

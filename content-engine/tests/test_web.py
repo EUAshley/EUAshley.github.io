@@ -62,3 +62,48 @@ def test_full_pipeline_via_web(client):
     assert "iPhone Features" in report and "5.00%" in report and "$4.50" in report
     for path in ("/", "/ideas", "/ideas?status=measured", "/offers", "/ideas/new", "/ideas/1/edit"):
         assert client.get(path).status_code == 200
+
+
+def test_automation_features_via_web(client, monkeypatch):
+    import io
+
+    from engine import ai
+
+    fake_scores = {k: {"value": 3, "rationale": "ok"} for k in scoring.criteria()}
+    monkeypatch.setattr(ai, "available", lambda: True)
+    monkeypatch.setattr(ai, "structured", lambda *a, **k: ({"ideas": [{
+        "title": "Silence work apps at 6pm", "category": "Automations", "problem_solved": "p", "benefit": "b",
+        "target_audience": "a", "hook": "h", "solution_steps": ["one", "two"], "tools": ["Focus"],
+        "research_notes": "n", "scores": fake_scores}]} if "ideas" in a[2]["properties"] else fake_scores, "m"))
+
+    assert "Research new ideas with Claude" in client.get("/ideas").get_data(as_text=True)
+    ok(client.post("/ideas/ai-suggest", data={"count": "1", "web_search": "on"}))
+    page = client.get("/ideas/1").get_data(as_text=True)
+    assert "Silence work apps at 6pm" in page and ">AI<" in page
+
+    # Take it to published with a tracked affiliate offer
+    ok(client.post("/offers", data={"type": "affiliate", "name": "Stand", "url": "https://amzn.to/x",
+                                    "link_template": "https://amazon.com/dp/B0?tag=me-20&ascsubtag={code}"}))
+    ok(client.post("/ideas/1/offers", data={"offer_id": "1"}))
+    ok(client.post("/ideas/1/scores", data={f"score_{k}": 4 for k in scoring.criteria()}))
+    for path, data in [("/ideas/1/transition", {"to": "selected"}), ("/ideas/1/script/generate", {}),
+                       ("/ideas/1/package", {}), ("/ideas/1/submit", {}),
+                       ("/ideas/1/review", {"decision": "approved"}),
+                       ("/ideas/1/queue", {"platform": "tiktok"})]:
+        ok(client.post(path, data=data))
+    assert "ascsubtag=dbs1tt1" in client.get("/queue").get_data(as_text=True)
+    ok(client.post("/publications/1/published", data={"url": "https://www.tiktok.com/@me/video/123",
+                                                      "published_at": "2026-09-01"}))
+    import re
+    assert re.search(r"day (7|30) snapshot", client.get("/").get_data(as_text=True))  # published weeks ago
+
+    csv_bytes = b"Video link,Video views,Favorites\nhttps://tiktok.com/@me/video/123,2.5K,120\n"
+    resp = client.post("/import/metrics", data={"files": (io.BytesIO(csv_bytes), "tiktok.csv")},
+                       content_type="multipart/form-data", follow_redirects=True)
+    assert "imported 1 snapshot" in resp.get_data(as_text=True)
+    rev = b"Date,Tracking ID,Clicks,Items Ordered,Ad Fees\n2026-09-20,dbs1tt1,10,1,$3.25\n"
+    resp = client.post("/import/revenue", data={"file": (io.BytesIO(rev), "amazon.csv")},
+                       content_type="multipart/form-data", follow_redirects=True)
+    assert "imported 1 revenue" in resp.get_data(as_text=True)
+    report = client.get("/report").get_data(as_text=True)
+    assert "$3.25" in report and "4.80%" in report  # 120 saves / 2,500 views

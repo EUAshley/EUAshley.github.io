@@ -55,6 +55,11 @@ def scoring_config() -> dict:
 
 
 @lru_cache
+def metrics_import_config() -> dict:
+    return yaml.safe_load((config_dir() / "metrics_import.yaml").read_text())
+
+
+@lru_cache
 def brand_config(slug: str) -> dict:
     path = config_dir() / "brands" / f"{slug}.yaml"
     if not path.exists():
@@ -69,3 +74,4 @@ def available_brand_configs() -> list[dict]:
 def reload() -> None:
     scoring_config.cache_clear()
     brand_config.cache_clear()
+    metrics_import_config.cache_clear()

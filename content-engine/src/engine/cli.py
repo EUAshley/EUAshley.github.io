@@ -10,8 +10,26 @@ from .services import ideas, performance, production
 
 
 @click.group()
-def cli():
+@click.pass_context
+def cli(ctx):
     """Daily Benefit Shorts content engine."""
+    if ctx.invoked_subcommand != "demo":
+        db.create_all()  # creates tables and adds new columns to existing databases
+
+
+def _ai_errors(fn):
+    """Show AI failures (no key, refusal, truncation) as a clean CLI error."""
+    from functools import wraps
+
+    from . import ai
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except (ai.AIUnavailable, RuntimeError) as e:
+            raise click.ClickException(str(e))
+    return wrapper
 
 
 @cli.command("init")
@@ -29,7 +47,6 @@ def seed_cmd(path):
     """Load example ideas (and offers) from a YAML file."""
     from .demo import load_seed
 
-    db.create_all()
     with db.session_scope() as s:
         created = load_seed(s, path)
         click.echo(f"Added {len(created)} ideas.")
@@ -67,14 +84,92 @@ def export_cmd(idea_id, out):
 
 
 @cli.command("import-metrics")
-@click.argument("csv_path", type=click.Path(exists=True, path_type=Path))
-def import_cmd(csv_path):
-    """Import performance snapshots from CSV (columns: publication_id or url, views, saves, ...)."""
+@click.argument("csv_paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
+def import_cmd(csv_paths):
+    """Import analytics exports. With no arguments, imports every CSV in
+    data/inbox/ and moves it to data/inbox/processed/."""
     with db.session_scope() as s:
-        n, errors = performance.import_csv(s, csv_path)
-    click.echo(f"Imported {n} snapshot(s).")
+        if csv_paths:
+            results = {p.name: performance.import_csv(s, p) for p in csv_paths}
+        else:
+            results = performance.import_inbox(s)
+            if not results:
+                click.echo(f"No CSV files in {performance.inbox_dir()}")
+    for name, r in results.items():
+        click.echo(f"{name}: imported {r.imported}, unmatched rows {r.unmatched}")
+        for e in r.errors:
+            click.echo(f"  {e}", err=True)
+
+
+@cli.command("import-revenue")
+@click.argument("csv_path", type=click.Path(exists=True, path_type=Path))
+@click.option("--offer", "offer_ref", default=None, help="Offer id or name, if the report has no offer column.")
+def import_revenue_cmd(csv_path, offer_ref):
+    """Import an affiliate/revenue report; rows are attributed to videos by tracking code."""
+    from .services import tracking
+
+    with db.session_scope() as s:
+        offer = tracking.find_offer(s, offer_ref) if offer_ref else None
+        if offer_ref and offer is None:
+            raise click.ClickException(f"No offer '{offer_ref}'")
+        n, errors = tracking.import_revenue_csv(s, csv_path, default_offer=offer)
+    click.echo(f"Imported {n} revenue row(s).")
     for e in errors:
-        click.echo(f"  skipped {e}", err=True)
+        click.echo(f"  {e}", err=True)
+
+
+@cli.command("due")
+def due_cmd():
+    """Published videos that need a metrics snapshot (day 1 / 7 / 30)."""
+    with db.session_scope() as s:
+        due = performance.metrics_due(s)
+        for d in due:
+            p = d["publication"]
+            click.echo(f"day {d['checkpoint']:>2} snapshot due  #{p.idea.id} {p.platform:<16} {p.idea.title}  {p.url}")
+        if not due:
+            click.echo("No snapshots due.")
+
+
+@cli.command("ai-ideas")
+@click.option("--category", default=None, help="Limit to one category.")
+@click.option("--count", default=5, show_default=True)
+@click.option("--no-web", is_flag=True, help="Skip web search (faster, cheaper, less current).")
+@_ai_errors
+def ai_ideas_cmd(category, count, no_web):
+    """Research new ideas with Claude, informed by performance and learnings."""
+    from .services import ai_assist
+
+    with db.session_scope() as s:
+        created = ai_assist.suggest_ideas(s, category=category, count=count, web_search=not no_web)
+        for idea in created:
+            res = scoring.score_idea(idea)
+            click.echo(f"#{idea.id:<4} {res.total or '-':>5} (AI)  {idea.title}")
+    click.echo("Review them in the UI; save scores yourself to move them to 'scored'.")
+
+
+@cli.command("ai-score")
+@click.argument("idea_id", type=int)
+@_ai_errors
+def ai_score_cmd(idea_id):
+    """Suggest scores for an idea (fills only criteria you haven't scored)."""
+    from .services import ai_assist
+
+    with db.session_scope() as s:
+        res = ai_assist.suggest_scores(s, ideas.get_idea(s, idea_id))
+        for key, b in res.breakdown.items():
+            click.echo(f"  {b['label']:<24} {b['value']}")
+        click.echo(f"Total: {res.total}")
+
+
+@cli.command("daily")
+def daily_cmd():
+    """Routine run: import the inbox, list snapshots due, print the report."""
+    ctx = click.get_current_context()
+    ctx.invoke(import_cmd, csv_paths=())
+    click.echo("")
+    ctx.invoke(due_cmd)
+    click.echo("")
+    ctx.invoke(report_cmd)
 
 
 @cli.command("report")

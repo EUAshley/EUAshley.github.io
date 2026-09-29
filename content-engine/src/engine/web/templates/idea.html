@@ -35,7 +35,7 @@
     {% set existing = {} %}{% for s in idea.scores %}{% set _ = existing.update({s.criterion: s}) %}{% endfor %}
     {% for key, c in criteria.items() %}
     <tr>
-      <td><strong>{{ c.label }}</strong><br><span class="muted">{{ c.question }}</span></td>
+      <td><strong>{{ c.label }}</strong>{% if existing[key] and existing[key].scored_by == 'ai' %} <span class="pill">AI</span>{% endif %}<br><span class="muted">{{ c.question }}</span></td>
       <td class="num">{{ c.weight }}</td>
       <td><select name="score_{{ key }}">
         <option value="">–</option>
@@ -46,8 +46,13 @@
     {% endfor %}
   </table></div>
   <button class="primary">Save scores</button>
+  {% if idea.scores|selectattr('scored_by', 'equalto', 'ai')|list %}<span class="muted">Rows marked AI are Claude's suggestions; saving confirms them as yours.</span>{% endif %}
   {% if score.adjustment %}<span class="muted">includes category adjustment {{ score.adjustment }}</span>{% endif %}
 </form>
+{% if ai_enabled %}
+<form method="post" action="{{ url_for('idea_ai_score', idea_id=idea.id) }}"><button>Suggest scores with AI</button>
+  <span class="muted">Only fills criteria you haven't scored.</span></form>
+{% endif %}
 
 {% set script = idea.current_script %}
 <h2 id="script">Script {% if script %}<span class="muted">v{{ script.version }} · {{ script.generator }} · ~{{ script.target_seconds }}s</span>{% endif %}</h2>
@@ -149,6 +154,12 @@
   <strong>{{ pub.platform }}</strong> <span class="pill">{{ pub.status }}</span>
   {% if pub.scheduled_for %}<span class="muted">scheduled {{ pub.scheduled_for }}</span>{% endif %}
   {% if pub.url %}<a href="{{ pub.url }}" target="_blank" rel="noopener">{{ pub.url }}</a> <span class="muted">published {{ pub.published_at }}</span>{% endif %}
+  {% if pub.tracking_code %}
+    <div class="muted">tracking code <code>{{ pub.tracking_code }}</code></div>
+    {% if pub.tracking_links %}<table>{% for l in pub.tracking_links %}
+      <tr><td>{{ l.offer }}</td><td>{% if l.url %}<code>{{ l.url }}</code>{% else %}<span class="muted">offer has no URL</span>{% endif %}</td></tr>
+    {% endfor %}</table>{% endif %}
+  {% endif %}
   {% if pub.status == 'queued' %}
     <form method="post" action="{{ url_for('pub_published', pub_id=pub.id) }}" class="row">
       <input name="url" placeholder="Post URL (after you publish it)" required size="40">

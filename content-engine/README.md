@@ -7,8 +7,9 @@ IDEA → SCORE → SELECT → SCRIPT → PRODUCTION PACKAGE → HUMAN APPROVAL
      → PUBLISH QUEUE → PERFORMANCE DATA → LEARNINGS → (better) IDEAS
 ```
 
-This is **Phase 1 (MVP)**. It runs locally, needs no external APIs, and costs nothing to operate.
-Nothing is ever posted to a platform automatically: you post by hand and record the URL.
+Phase 1 (the MVP) plus the first Phase 2 automations. It runs locally and works with no external
+APIs; AI features switch on when you add an Anthropic API key. Nothing is ever posted to a platform
+automatically: you post by hand and record the URL.
 
 ## Setup
 
@@ -45,11 +46,52 @@ database (`data/demo.db`) and prints the report. To browse that database, run
 
 Useful CLI commands: `engine ideas` (ranked queue), `engine report`, `engine export-package <id> --out exports/x.md`.
 
-### CSV metrics import
+## Automation (Phase 2)
 
-Columns: `publication_id` **or** `url` (must match the URL you recorded), then any of
-`views, likes, comments, shares, saves, follows, link_clicks, avg_watch_seconds, retention_pct, captured_at`.
-Rows that don't match a publication are skipped and reported.
+### One routine: `engine daily`
+
+Drop analytics exports into `data/inbox/`, then run `engine daily`. It imports every CSV (then moves it
+to `data/inbox/processed/`), lists videos that need a metrics snapshot, and prints the report. The
+dashboard shows the same "Metrics due" list and has an upload box for exports.
+
+### Analytics exports (TikTok, Instagram, YouTube Studio)
+
+`engine import-metrics` (inbox) or `engine import-metrics file1.csv file2.csv`, or upload on the dashboard.
+- Rows are matched to your posts by `publication_id`, by URL, or by the **video ID** extracted from the
+  URL you recorded when publishing, so exports that only list video IDs still match.
+- Headers are recognized from `config/metrics_import.yaml` ("Video views", "Favorites", "Average view
+  duration", "New followers", …). If a platform renames a column, add the new name there.
+- Understands `1.2K`, `12,345`, `71.5%`, and `0:00:14`. Totals rows and other people's videos are
+  counted as "unmatched" and ignored.
+- Snapshot checkpoints (default day 1 / 7 / 30) are set in the same file.
+
+### Per-video tracking links and revenue attribution
+
+When a package is queued, the publication gets a short **tracking code** (e.g. `dbs12tt31`) and a
+tracking link for every offer linked to the idea or its category:
+- If the offer has a **link template** with `{code}` (most affiliate programs have a sub-ID field,
+  e.g. Amazon's `ascsubtag`), the code goes there:
+  `https://www.amazon.com/dp/B0…?tag=you-20&ascsubtag={code}`
+- Otherwise the offer URL gets `utm_source=<platform>&utm_medium=shortform&utm_campaign=<code>`.
+
+Links show on the publish queue and the idea page; put them in the caption or your link-in-bio.
+Linking a new offer later refreshes the links. Then import the program's report with
+`engine import-revenue report.csv [--offer "Name"]` (or upload on **Offers**). Rows are attributed
+to the video by the code column ("Tracking ID", "SubID", "ascsubtag", "utm_campaign", …), and revenue
+flows into the report per video, category, and hook type.
+
+### AI research and scoring (optional)
+
+With `ANTHROPIC_API_KEY` set:
+- **Research new ideas**: the **Ideas** page, or `engine ai-ideas [--category "AI Tools"] [--count 5] [--no-web]`.
+  Claude sees your best and worst performers, your learnings, and every existing idea (to avoid
+  repeats), and returns ideas with concrete steps, tools, a hook, and suggested scores. With web
+  search on (the default), it checks the steps against current OS/app versions and lists things
+  to verify, with sources, in research notes.
+- **Suggest scores**: a button on each idea, or `engine ai-score <id>`. It only fills criteria you haven't scored.
+- AI output is always a suggestion. AI ideas are tagged **AI** and rank in the queue, but an idea
+  becomes `scored` only when you save its scores, and only you can select it for production.
+- Cost control: `ENGINE_CLAUDE_EFFORT=low|medium|high` and `--no-web`.
 
 ## Configuration (no code changes needed)
 
@@ -125,11 +167,11 @@ when the script changes).
 
 ## Roadmap
 
-**Phase 2: Automation.** AI-assisted scoring suggestions (store as `scored_by=ai` next to human
-scores). Automated research and trend discovery that feeds new `ideas` with `source` set. Affiliate
-matching from `ideas.tools` to `offers`. Per-publication tracking links for real attribution.
-Analytics ingestion as new `source=api` snapshots. Voice and asset generation attached to packages.
-Add Alembic migrations before the schema changes with real data in it.
+**Phase 2: Automation.** Done: AI idea research with web verification, AI score suggestions,
+per-video tracking links, revenue-report attribution, analytics-export import with an inbox, and
+metrics-due reminders. Next: direct platform APIs (YouTube Analytics first, since it has the most open
+API) as `source=api` snapshots; affiliate matching from `ideas.tools` to offers; trend discovery;
+voice and asset generation attached to packages.
 
 **Phase 3: Intelligence.** Compute `category_adjustments` from performance instead of hand-editing them.
 Hook A/B tests (two scripts, same idea, compare by `hook_type`). Topic clustering over ideas and learnings.
@@ -141,4 +183,6 @@ Monetization and product-opportunity detection from offer clicks and saves.
   copy: expect to edit on-screen text and the problem line.
 - No authentication: this is meant to run on your own machine (`127.0.0.1`).
 - Report recommendations are simple heuristics and need 3+ videos per group before they say anything.
-- Schema changes currently mean `create_all` for new tables only. Add Alembic before changing existing columns.
+- Database upgrades are automatic for *added* tables and columns (every command runs them). Renaming or
+  removing columns will need a real migration tool (Alembic); add it before making that kind of change.
+- AI features were tested against the real SDK with a mock server, not with live API calls.

@@ -1,6 +1,7 @@
 # Starter ideas for Daily Benefit Shorts. Load with:  engine seed
 # Scores are 1-5 first guesses; adjust them in the UI.
-# Steps are from memory: verify on a current iOS version before filming.
+# Steps were checked against Apple docs and current guides (Sept 2026); still do a
+# dry run on your phone before filming since menu names shift between iOS versions.
 
 ideas:
   - title: Automatically text someone your ETA when you leave work
@@ -11,13 +12,16 @@ ideas:
     hook: Your iPhone can text your ETA for you when you leave work.
     tools: Shortcuts, Apple Maps
     solution_steps: |
-      Open Shortcuts, go to Automation, tap New Automation
-      Choose Leave, pick your work location
-      Add the action Get Travel Time to Home
-      Add Send Message: "Leaving now, home in [Travel Time]"
-      Set it to Run Immediately
+      Open Shortcuts, tap Automation, then New Automation
+      Choose Leave, pick your work location, and select Run Immediately
+      Add the action Get Travel Time, set to Driving, to Home
+      Add Send Message with "Leaving now, home in" plus the Travel Time variable, to your contact
+      Turn off Show When Run on Send Message so it sends without asking
     source: Personal use / common Reddit r/shortcuts request
-    research_notes: Check whether location automations run without confirmation on the current iOS version.
+    research_notes: >
+      Location (Arrive/Leave) automations can Run Immediately since iOS 17 (earlier versions always
+      asked for confirmation). Some iOS 18.2 users reported it asking anyway; test on your phone first.
+      Travel Time is a duration ("20 min"); Get Travel Time also offers an Arrival Time output.
     scores: {usefulness: 5, hook_strength: 5, demonstrability: 4, novelty: 4, production_ease: 4, monetization: 3, repeatability: 5}
 
   - title: Turn photos into a PDF without any app
@@ -33,6 +37,7 @@ ideas:
       Pinch outward on the preview to open it as a PDF
       Tap Share, then Save to Files
     source: Classic hidden iOS trick
+    research_notes: Pinch-out on the print preview still produces a PDF in current iOS; works for multiple photos at once.
     scores: {usefulness: 5, hook_strength: 4, demonstrability: 5, novelty: 3, production_ease: 5, monetization: 2, repeatability: 4}
 
   - title: Take a screenshot by tapping the back of your iPhone
@@ -47,6 +52,7 @@ ideas:
       Tap Touch, then Back Tap
       Choose Double Tap and select Screenshot
     source: iOS accessibility feature
+    research_notes: Requires iPhone 8 or later (iOS 14+). Triple Tap can be set to a second action.
     scores: {usefulness: 4, hook_strength: 5, demonstrability: 5, novelty: 3, production_ease: 5, monetization: 1, repeatability: 4}
 
   - title: Log an expense in 3 seconds with one tap
@@ -55,12 +61,16 @@ ideas:
     benefit: One tap asks the amount and category and saves it to a spreadsheet.
     target_audience: People trying to budget
     hook: This one-tap button tracks every coffee you buy.
-    tools: Shortcuts, Numbers
+    tools: Shortcuts, Notes
     solution_steps: |
-      Create a new Shortcut with Ask for Input (Number) for the amount
+      Create a new shortcut and add Ask for Input, set to Number, for the amount
       Add Choose from Menu with your spending categories
-      Add Append to Text File or Add Row to a Numbers spreadsheet
+      Add a Text action combining Current Date, the category, and the amount
+      Add Append to Note and pick an "Expenses" note
       Add the shortcut to your Home Screen
+    research_notes: >
+      Append to Note is the simplest reliable destination. For a spreadsheet, Numbers' own Shortcuts
+      actions work but their names vary by version; confirm the action name before filming.
     source: Budgeting subreddit pain point
     scores: {usefulness: 4, hook_strength: 4, demonstrability: 4, novelty: 4, production_ease: 3, monetization: 4, repeatability: 4}
 
@@ -72,8 +82,8 @@ ideas:
     hook: Talk for 60 seconds, get a to-do list back.
     tools: Voice Memos, Claude
     solution_steps: |
-      Record your thoughts in a voice memo or dictate into the AI app
-      Paste or dictate into Claude with "Turn this into a prioritized to-do list"
+      Record your thoughts in Voice Memos and open the transcript (iOS 18+), or dictate straight into the Claude app
+      Paste it into Claude with "Turn this into a prioritized to-do list"
       Copy the list into Reminders or Notes
     source: Own workflow
     scores: {usefulness: 4, hook_strength: 4, demonstrability: 3, novelty: 3, production_ease: 4, monetization: 4, repeatability: 5}

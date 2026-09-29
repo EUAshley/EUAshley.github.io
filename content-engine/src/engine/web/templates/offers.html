@@ -20,12 +20,23 @@ Link an offer to a category here, or to a single idea from the idea page.</p>
   {% else %}<tr><td colspan="7" class="muted">No offers yet.</td></tr>{% endfor %}
 </table></div>
 
+<h2>Import revenue report</h2>
+<form method="post" action="{{ url_for('import_revenue') }}" enctype="multipart/form-data" class="row">
+  <input type="file" name="file" accept=".csv" required>
+  <select name="offer_id"><option value="">offer from report / tracking code</option>
+    {% for row in summary %}<option value="{{ row.offer.id }}">{{ row.offer.name }}</option>{% endfor %}</select>
+  <button>Import</button>
+  <span class="muted">Needs a tracking code / sub-ID column to attribute revenue to a video.</span>
+</form>
+
 <h2>New offer</h2>
 <form method="post" class="grid">
   <div class="field"><label>Type</label><select name="type">{% for t in offer_types %}<option>{{ t }}</option>{% endfor %}</select></div>
   <div class="field"><label>Name *</label><input name="name" required></div>
   <div class="field"><label>URL</label><input name="url"></div>
   <div class="field"><label>Program</label><input name="program" placeholder="e.g. Amazon Associates"></div>
+  <div class="field"><label>Per-video link template</label><input name="link_template" placeholder="https://…?tag=me-20&ascsubtag={code}">
+    <span class="muted">Optional. Use {code} where the program takes a sub-ID. Blank = URL + UTM tags.</span></div>
   <div class="field"><label>Terms</label><input name="terms" placeholder="commission, cookie window"></div>
   <div class="field"><label>Link to category</label><select name="category_id"><option value="">(none)</option>
     {% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>

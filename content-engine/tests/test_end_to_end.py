@@ -27,8 +27,8 @@ def test_one_idea_through_the_whole_system(session, tmp_path):
     # Second snapshot via CSV, plus revenue attributed to the video.
     csv_file = tmp_path / "metrics.csv"
     csv_file.write_text(f"url,views,saves,shares,link_clicks\n{pub.url},20000,900,150,40\nhttps://nope,1,1,1,1\n")
-    n, errors = performance.import_csv(session, csv_file)
-    assert n == 1 and len(errors) == 1
+    result = performance.import_csv(session, csv_file)
+    assert result.imported == 1 and result.unmatched == 1 and not result.errors
     offer = offers.offers_for_idea(session, idea)[0]
     from datetime import date
     offers.record_revenue(session, offer, on=date.today(), clicks=40, conversions=3, revenue_cents=897,

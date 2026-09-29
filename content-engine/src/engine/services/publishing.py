@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from .. import workflow
 from ..models import Approval, Idea, Publication
+from . import tracking
 from .production import current_package
 
 DECISIONS = {
@@ -58,6 +59,7 @@ def queue(session: Session, idea: Idea, platform: str, scheduled_for: date | Non
                       tracking_link=tracking_link)
     session.add(pub)
     session.flush()
+    tracking.assign(session, pub)
     if idea.status == workflow.APPROVED:
         workflow.transition(session, idea, workflow.QUEUED, note=f"queued for {platform}")
     return pub

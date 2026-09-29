@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Publish queue</h1>
-<p class="muted">Only approved packages appear here. Post each one by hand, then mark it published with its URL on the idea page.</p>
+<p class="muted">Only approved packages appear here. Post each one by hand, using the tracking links below in your caption or link-in-bio so sales can be traced to the video, then mark it published with its URL on the idea page.</p>
 <div class="wrap"><table>
   <tr><th>Scheduled</th><th>Platform</th><th>Idea</th><th>Package</th><th></th></tr>
   {% for p in queue %}
   <tr>
     <td>{{ p.scheduled_for or 'unscheduled' }}</td><td>{{ p.platform }}</td>
     <td><a href="{{ url_for('idea_detail', idea_id=p.idea.id) }}#publications">{{ p.idea.title }}</a></td>
-    <td><a href="{{ url_for('package_md', idea_id=p.idea.id) }}">brief (.md)</a></td>
+    <td><a href="{{ url_for('package_md', idea_id=p.idea.id) }}">brief (.md)</a>
+        {% for l in p.tracking_links or [] %}{% if l.url %}<br><span class="muted">{{ l.offer }}:</span> <code>{{ l.url }}</code>{% endif %}{% endfor %}</td>
     <td><form class="inline" method="post" action="{{ url_for('pub_cancel', pub_id=p.id) }}"><button>Remove</button></form></td>
   </tr>
   {% else %}<tr><td colspan="5" class="muted">Queue is empty.</td></tr>{% endfor %}
